@@ -11,6 +11,17 @@
 
 ---
 
+## Sessão 6 — 2026-05-24 | Fix: Migração de Cache
+
+**O que foi feito:**
+- Diagnóstico de erro em produção: cache da Home ainda no formato antigo (array) quebrava a página ao tentar ler como `{ data, total }`
+- `getLatestMangasCached` agora detecta se o cache é array (formato antigo) e converte para `{ data, total }` automaticamente
+- Cache antigo limpo do banco PostgreSQL
+
+**Estado do build:** ✅ Compilando e deployado em https://manga-hub-br.vercel.app
+
+---
+
 ## Sessão 5 — 2026-05-24 | Reforço do Sistema de Memória
 
 **O que foi feito:**

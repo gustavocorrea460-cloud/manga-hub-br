@@ -97,6 +97,18 @@ export async function getChaptersCached(
   }
 }
 
+function normalizeChapterPages(
+  data: unknown,
+): { pages: string[]; dataSaver: string[]; baseUrl: string; hash: string } {
+  const d = data as Record<string, unknown>
+  return {
+    pages: (d.pages || d.data) as string[],
+    dataSaver: d.dataSaver as string[],
+    baseUrl: d.baseUrl as string,
+    hash: (d.hash as string) || "",
+  }
+}
+
 export async function getChapterPagesCached(
   chapterId: string,
 ): Promise<{ pages: string[]; dataSaver: string[]; baseUrl: string; hash: string }> {
@@ -104,7 +116,7 @@ export async function getChapterPagesCached(
 
   const cached = await getChapterCache(cacheKey)
   if (cached && !isExpired(cached.updated_at as string)) {
-    return cached.data as { pages: string[]; dataSaver: string[]; baseUrl: string; hash: string }
+    return normalizeChapterPages(cached.data)
   }
 
   try {
@@ -120,7 +132,7 @@ export async function getChapterPagesCached(
   } catch {
     if (cached) {
       console.warn("API falhou, servindo cache expirado para:", cacheKey)
-      return cached.data as { pages: string[]; dataSaver: string[]; baseUrl: string; hash: string }
+      return normalizeChapterPages(cached.data)
     }
     throw new Error("MangaDex API indisponível e nenhum cache encontrado")
   }
