@@ -9,9 +9,7 @@ import ErrorMessage from "@/components/ErrorMessage"
 import EmptyState from "@/components/EmptyState"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { searchMangaWithFilters } from "@/lib/api/mangadex"
-import * as mangafire from "@/lib/api/mangafire"
-import * as mangastop from "@/lib/api/mangastop"
-import { getTagsCached } from "@/lib/cache"
+import { getTagsCached, searchMangaFireCached, searchMangaStopCached } from "@/lib/cache"
 import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/mangadex"
 
 const LIMIT = 30
@@ -133,7 +131,7 @@ async function MangaFireResults({ query, page }: { query: string; page: number }
 
   let result
   try {
-    result = await mangafire.searchManga(query, page)
+    result = await searchMangaFireCached(query, page)
   } catch {
     return <ErrorMessage message="Erro ao buscar no MangaFire. Tente novamente." />
   }
@@ -214,7 +212,7 @@ async function MangaStopResults({ query }: { query: string }) {
 
   let results
   try {
-    results = await mangastop.searchManga(query)
+    results = await searchMangaStopCached(query)
   } catch {
     return <ErrorMessage message="Erro ao buscar no MangaStop. Tente novamente." />
   }

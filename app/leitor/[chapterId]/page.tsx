@@ -1,9 +1,14 @@
 import { notFound } from "next/navigation"
 import Reader from "@/components/Reader"
 import ErrorMessage from "@/components/ErrorMessage"
-import { getChapterPagesCached, getChaptersCached } from "@/lib/cache"
-import * as mangafire from "@/lib/api/mangafire"
-import * as mangastop from "@/lib/api/mangastop"
+import {
+  getChapterPagesCached,
+  getChaptersCached,
+  getMangaFirePagesCached,
+  getMangaFireChaptersCached,
+  getMangaStopPagesCached,
+  getMangaStopChaptersCached,
+} from "@/lib/cache"
 import { getScanlatorName } from "@/types/mangadex"
 import { Suspense } from "react"
 import type { Chapter } from "@/types/mangadex"
@@ -128,7 +133,7 @@ async function MangaStopReader({
 }) {
   let images: string[]
   try {
-    images = await mangastop.getChapterImages(chapterId)
+    images = await getMangaStopPagesCached(chapterId)
   } catch {
     return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no MangaStop." />
   }
@@ -137,7 +142,7 @@ async function MangaStopReader({
 
   if (mangaId) {
     try {
-      const chapters = await mangastop.getChapters(mangaId)
+      const chapters = await getMangaStopChaptersCached(mangaId)
       prevNext = await getPrevNextMangaStop(chapters, chapterId)
     } catch {
       // non-critical
@@ -168,7 +173,7 @@ async function MangaFireReader({
 }) {
   let images: string[]
   try {
-    images = await mangafire.getChapterImages(chapterId)
+    images = await getMangaFirePagesCached(chapterId)
   } catch {
     return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no MangaFire." />
   }
@@ -177,7 +182,7 @@ async function MangaFireReader({
 
   if (mangaId) {
     try {
-      const chapters = await mangafire.getChapters(mangaId, "en")
+      const chapters = await getMangaFireChaptersCached(mangaId, "en")
       prevNext = await getPrevNextMangaFire(chapters, chapterId)
     } catch {
       // non-critical

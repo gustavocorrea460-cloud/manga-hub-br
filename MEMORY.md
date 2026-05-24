@@ -529,7 +529,7 @@ function slugify(title: string): string
 - [x] Source switch param (?source=mangadex|mangafire|mangastop) ✅
 - [x] **Integração MangaStop.net** (cheerio + WordPress mangareader theme) ✅
 - [ ] Source indicator UI (mostrar qual fonte serviu cada capítulo/dado)
-- [ ] Cache PostgreSQL para MangaFire (integração com cache layer existente)
+- [x] Cache PostgreSQL multi-source: MangaFire + MangaStop (prefixos `mf:*`, `ms:*`) ✅
 - [ ] Integração LeituraManga.net
 - [ ] Integração QueroLer.com
 

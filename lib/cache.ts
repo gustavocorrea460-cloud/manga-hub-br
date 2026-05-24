@@ -13,7 +13,11 @@ import {
   getChapterPages,
   getTags as fetchTags,
 } from "@/lib/api/mangadex"
+import * as mangafire from "@/lib/api/mangafire"
+import * as mangastop from "@/lib/api/mangastop"
 import type { Manga, Chapter, Tag } from "@/types/mangadex"
+import type { MangaFireSearchResponse, MangaFireManga, MangaFireChapter } from "@/types/mangafire"
+import type { MangaStopSearchResult, MangaStopManga, MangaStopChapter } from "@/types/mangastop"
 
 const CACHE_TTL_MINUTES = 30
 
@@ -21,6 +25,51 @@ function isExpired(updatedAt: string): boolean {
   const then = new Date(updatedAt).getTime()
   const now = Date.now()
   return now - then > CACHE_TTL_MINUTES * 60 * 1000
+}
+
+async function withMangaCache<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  ttlMinutes: number = CACHE_TTL_MINUTES,
+): Promise<T> {
+  const cached = await getCache(key)
+  if (cached && !isExpiredCustom(cached.updated_at as string, ttlMinutes)) {
+    return cached.data as T
+  }
+  try {
+    const data = await fetchFn()
+    await setCache(key, data)
+    return data
+  } catch {
+    if (cached) {
+      console.warn(`API falhou, servindo cache expirado para: ${key}`)
+      return cached.data as T
+    }
+    throw new Error(`Falha ao buscar dados para ${key}`)
+  }
+}
+
+async function withChapterCache<T>(
+  key: string,
+  mangaId: string,
+  fetchFn: () => Promise<T>,
+  ttlMinutes: number = CACHE_TTL_MINUTES,
+): Promise<T> {
+  const cached = await getChapterCache(key)
+  if (cached && !isExpiredCustom(cached.updated_at as string, ttlMinutes)) {
+    return cached.data as T
+  }
+  try {
+    const data = await fetchFn()
+    await setChapterCache(key, mangaId, data)
+    return data
+  } catch {
+    if (cached) {
+      console.warn(`API falhou, servindo cache expirado para: ${key}`)
+      return cached.data as T
+    }
+    throw new Error(`Falha ao buscar dados para ${key}`)
+  }
 }
 
 export async function getLatestMangasCached(
@@ -119,6 +168,88 @@ export async function getTagsCached(): Promise<Tag[]> {
     return []
   }
 }
+
+// ─── MangaFire Cached ──────────────────────────────────────────
+
+export async function searchMangaFireCached(
+  query: string,
+  page: number = 1,
+): Promise<MangaFireSearchResponse> {
+  return withMangaCache(
+    `mf:search:${query.toLowerCase().trim()}:${page}`,
+    () => mangafire.searchManga(query, page),
+  )
+}
+
+export async function getMangaFireCached(id: string): Promise<MangaFireManga> {
+  return withMangaCache(
+    `mf:manga:${id}`,
+    () => mangafire.getManga(id),
+  )
+}
+
+export async function getMangaFireChaptersCached(
+  mangaId: string,
+  lang: string = "pt-br",
+): Promise<MangaFireChapter[]> {
+  return withChapterCache(
+    `mf:chapters:${mangaId}:${lang}`,
+    `mf:${mangaId}`,
+    () => mangafire.getChapters(mangaId, lang),
+  )
+}
+
+export async function getMangaFirePagesCached(
+  chapterId: string,
+): Promise<string[]> {
+  return withChapterCache(
+    `mf:pages:${chapterId}`,
+    `mf:${chapterId}`,
+    () => mangafire.getChapterImages(chapterId),
+  )
+}
+
+// ─── MangaStop Cached ──────────────────────────────────────────
+
+export async function searchMangaStopCached(
+  query: string,
+): Promise<MangaStopSearchResult[]> {
+  return withMangaCache(
+    `ms:search:${query.toLowerCase().trim()}`,
+    () => mangastop.searchManga(query),
+  )
+}
+
+export async function getMangaStopCached(
+  slug: string,
+): Promise<MangaStopManga> {
+  return withMangaCache(
+    `ms:manga:${slug}`,
+    () => mangastop.getManga(slug),
+  )
+}
+
+export async function getMangaStopChaptersCached(
+  slug: string,
+): Promise<MangaStopChapter[]> {
+  return withChapterCache(
+    `ms:chapters:${slug}`,
+    `ms:${slug}`,
+    () => mangastop.getChapters(slug),
+  )
+}
+
+export async function getMangaStopPagesCached(
+  chapterUrlPath: string,
+): Promise<string[]> {
+  return withChapterCache(
+    `ms:pages:${encodeURIComponent(chapterUrlPath)}`,
+    `ms:${chapterUrlPath}`,
+    () => mangastop.getChapterImages(chapterUrlPath),
+  )
+}
+
+// ─── Helpers ───────────────────────────────────────────────────
 
 function isExpiredCustom(updatedAt: string, ttlMinutes: number): boolean {
   const then = new Date(updatedAt).getTime()

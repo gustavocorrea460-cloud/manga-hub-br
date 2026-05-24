@@ -11,6 +11,22 @@
 
 ---
 
+## Sessão 14 — 2026-05-24 | Cache PostgreSQL multi-source (MangaFire + MangaStop)
+
+**O que foi feito:**
+- **Cache helpers genéricos** (`lib/cache.ts`) — `withMangaCache()` e `withChapterCache()` reutilizáveis, encapsulam padrão cache → fetch → fallback para qualquer fonte
+- **MangaFire cached functions** — `searchMangaFireCached()`, `getMangaFireCached()`, `getMangaFireChaptersCached()`, `getMangaFirePagesCached()` (prefixo `mf:` nas chaves)
+- **MangaStop cached functions** — `searchMangaStopCached()`, `getMangaStopCached()`, `getMangaStopChaptersCached()`, `getMangaStopPagesCached()` (prefixo `ms:` nas chaves)
+- **lib/sources.ts atualizado** — todas as chamadas agora passam pelas funções com cache
+- **app/busca/page.tsx atualizado** — `MangaFireResults` e `MangaStopResults` usam cache
+- **app/manga/[slug]/page.tsx atualizado** — `MangaDetailMangaFire`, `ChaptersSectionMangaFire`, `MangaDetailMangaStop`, `ChaptersSectionMangaStop` usam cache
+- **app/leitor/[chapterId]/page.tsx atualizado** — `MangaFireReader` e `MangaStopReader` usam cache
+- **Importações não usadas removidas** — `* as mangafire` e `* as mangastop` substituídos por imports específicos das funções cached
+- **Build: ✅** compila sem erros (8 routes)
+- **Decisões:** cache key namespaces — `mf:*` (MangaFire) e `ms:*` (MangaStop) no mesmo schema das tabelas, TTL 30min igual MangaDex
+
+---
+
 ## Sessão 13 — 2026-05-24 | MangaStop.net Scraper + 3-fontes Source Toggle
 
 **O que foi feito:**

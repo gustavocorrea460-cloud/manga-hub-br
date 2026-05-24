@@ -5,9 +5,15 @@ import { Suspense } from "react"
 import ChapterList from "@/components/ChapterList"
 import ErrorMessage from "@/components/ErrorMessage"
 import { ChapterListSkeleton, MangaDetailSkeleton } from "@/components/LoadingSkeleton"
-import { getMangaCached, getChaptersCached } from "@/lib/cache"
-import * as mangafire from "@/lib/api/mangafire"
-import * as mangastop from "@/lib/api/mangastop"
+import {
+  getMangaCached,
+  getChaptersCached,
+  getMangaFireCached,
+  getMangaFireChaptersCached,
+  getMangaStopCached,
+  getMangaStopChaptersCached,
+} from "@/lib/cache"
+import { getCoverUrl as getMangaFireCoverUrl } from "@/lib/api/mangafire"
 import {
   getTitle,
   getDescription,
@@ -138,12 +144,12 @@ async function ChaptersSectionMangaDex({ mangaId }: { mangaId: string }) {
 async function MangaDetailMangaFire({ mangaId }: { mangaId: string }) {
   let manga
   try {
-    manga = await mangafire.getManga(mangaId)
+    manga = await getMangaFireCached(mangaId)
   } catch {
     return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no MangaFire." />
   }
 
-  const coverUrl = mangafire.getCoverUrl(manga)
+  const coverUrl = getMangaFireCoverUrl(manga)
 
   return (
     <>
@@ -240,7 +246,7 @@ async function MangaDetailMangaFire({ mangaId }: { mangaId: string }) {
 async function ChaptersSectionMangaFire({ mangaId }: { mangaId: string }) {
   let chapters: MangaFireChapter[]
   try {
-    chapters = await mangafire.getChapters(mangaId, "en")
+    chapters = await getMangaFireChaptersCached(mangaId, "en")
   } catch {
     return <ErrorMessage message="Não foi possível carregar os capítulos." />
   }
@@ -279,7 +285,7 @@ async function ChaptersSectionMangaFire({ mangaId }: { mangaId: string }) {
 async function MangaDetailMangaStop({ mangaId }: { mangaId: string }) {
   let manga
   try {
-    manga = await mangastop.getManga(mangaId)
+    manga = await getMangaStopCached(mangaId)
   } catch {
     return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no MangaStop." />
   }
@@ -371,7 +377,7 @@ async function MangaDetailMangaStop({ mangaId }: { mangaId: string }) {
 async function ChaptersSectionMangaStop({ mangaId }: { mangaId: string }) {
   let chapters: MangaStopChapter[]
   try {
-    chapters = await mangastop.getChapters(mangaId)
+    chapters = await getMangaStopChaptersCached(mangaId)
   } catch {
     return <ErrorMessage message="Não foi possível carregar os capítulos." />
   }

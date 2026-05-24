@@ -1,10 +1,19 @@
 import { getLatestMangas, getManga, getChapters, searchMangaWithFilters } from "@/lib/api/mangadex"
-import { getChapterPagesCached } from "@/lib/cache"
+import {
+  getChapterPagesCached,
+  searchMangaFireCached,
+  getMangaFireCached,
+  getMangaFireChaptersCached,
+  getMangaFirePagesCached,
+  searchMangaStopCached,
+  getMangaStopCached,
+  getMangaStopChaptersCached,
+  getMangaStopPagesCached,
+} from "@/lib/cache"
 import * as mangafire from "@/lib/api/mangafire"
-import * as mangastop from "@/lib/api/mangastop"
 import type { Manga } from "@/types/mangadex"
-import type { MangaFireSearchResult, MangaFireManga, MangaFireChapter } from "@/types/mangafire"
-import type { MangaStopSearchResult, MangaStopManga, MangaStopChapter } from "@/types/mangastop"
+import type { MangaFireSearchResult, MangaFireChapter } from "@/types/mangafire"
+import type { MangaStopSearchResult, MangaStopChapter } from "@/types/mangastop"
 
 export type SourceId = "mangadex" | "mangafire" | "mangastop"
 
@@ -32,7 +41,7 @@ async function searchMangaFire(
   query: string,
   page: number,
 ): Promise<{ data: UnifiedSearchResult[]; total: number }> {
-  const result = await mangafire.searchManga(query, page)
+  const result = await searchMangaFireCached(query, page)
   const data = result.results.map((r: MangaFireSearchResult) => ({
     id: r.id || "",
     title: r.title || "Sem título",
@@ -47,7 +56,7 @@ async function searchMangaStop(
   query: string,
   _page: number,
 ): Promise<{ data: UnifiedSearchResult[]; total: number }> {
-  const results = await mangastop.searchManga(query)
+  const results = await searchMangaStopCached(query)
   const data = results.map((r: MangaStopSearchResult) => ({
     id: r.id,
     title: r.title,
@@ -98,7 +107,7 @@ export async function searchSource(
 }
 
 async function getMangaMangaFire(id: string): Promise<UnifiedManga> {
-  const m = await mangafire.getManga(id)
+  const m = await getMangaFireCached(id)
   return {
     id,
     title: m.title || "Sem título",
@@ -113,7 +122,7 @@ async function getMangaMangaFire(id: string): Promise<UnifiedManga> {
 }
 
 async function getMangaMangaStop(id: string): Promise<UnifiedManga> {
-  const m = await mangastop.getManga(id)
+  const m = await getMangaStopCached(id)
   return {
     id,
     title: m.title || "Sem título",
@@ -175,7 +184,7 @@ export async function getChaptersSource(
   source: SourceId = "mangadex",
 ): Promise<{ number: string; id: string; title: string | null; date: string | null }[]> {
   if (source === "mangafire") {
-    const chapters = await mangafire.getChapters(mangaId, "en")
+    const chapters = await getMangaFireChaptersCached(mangaId, "en")
     return chapters.map((c: MangaFireChapter) => ({
       number: c.number,
       id: c.chapterId,
@@ -184,7 +193,7 @@ export async function getChaptersSource(
     }))
   }
   if (source === "mangastop") {
-    const chapters = await mangastop.getChapters(mangaId)
+    const chapters = await getMangaStopChaptersCached(mangaId)
     return chapters.map((c: MangaStopChapter) => ({
       number: c.number,
       id: c.chapterId,
@@ -206,11 +215,11 @@ export async function getChapterPagesSource(
   source: SourceId = "mangadex",
 ): Promise<{ pages: string[]; baseUrl: string | null }> {
   if (source === "mangafire") {
-    const images = await mangafire.getChapterImages(chapterId)
+    const images = await getMangaFirePagesCached(chapterId)
     return { pages: images, baseUrl: null }
   }
   if (source === "mangastop") {
-    const images = await mangastop.getChapterImages(chapterId)
+    const images = await getMangaStopPagesCached(chapterId)
     return { pages: images, baseUrl: null }
   }
   const data = await getChapterPagesCached(chapterId)
