@@ -152,6 +152,12 @@ export function getContentRatingLabel(rating: string): string {
   return labels[rating] || rating
 }
 
+export function getScanlatorName(chapter: Chapter): string | null {
+  const group = chapter.relationships.find(r => r.type === "scanlation_group")
+  if (!group?.attributes) return null
+  return (group.attributes as { name?: string }).name || null
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

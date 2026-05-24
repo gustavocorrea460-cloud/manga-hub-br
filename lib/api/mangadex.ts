@@ -44,27 +44,27 @@ async function fetchMangaDex<T>(
 export async function getLatestMangas(
   page: number = 1,
   limit: number = 20,
-): Promise<Manga[]> {
+): Promise<{ data: Manga[]; total: number }> {
   const params = createMangaParams()
   params.set("limit", String(limit))
   params.set("offset", String((page - 1) * limit))
 
   const data = await fetchMangaDex<MangaResponse>(`/manga?${params}`)
-  return data.data
+  return { data: data.data, total: data.total }
 }
 
 export async function searchManga(
   query: string,
   page: number = 1,
   limit: number = 20,
-): Promise<Manga[]> {
+): Promise<{ data: Manga[]; total: number }> {
   const params = createMangaParams()
   params.set("limit", String(limit))
   params.set("offset", String((page - 1) * limit))
   params.set("title", query)
 
   const data = await fetchMangaDex<MangaResponse>(`/manga?${params}`)
-  return data.data
+  return { data: data.data, total: data.total }
 }
 
 export async function getManga(id: string): Promise<Manga> {

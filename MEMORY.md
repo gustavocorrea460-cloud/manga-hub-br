@@ -190,9 +190,9 @@ CREATE TABLE IF NOT EXISTS reading_history (
 ## 📁 Estrutura de Pastas
 
 ```
-manga-hub-br/
+/
 ├── app/
-│   ├── page.tsx                    # Home (lançamentos recentes)
+│   ├── page.tsx                    # Home (lançamentos recentes + paginação)
 │   ├── layout.tsx                  # Layout global com Navbar
 │   ├── globals.css                 # Estilos globais Tailwind
 │   ├── not-found.tsx               # Página 404
@@ -204,40 +204,41 @@ manga-hub-br/
 │   │       └── loading.tsx         # Loading da página
 │   ├── leitor/
 │   │   └── [chapterId]/
-│   │       ├── page.tsx            # Leitor de capítulos
+│   │       ├── page.tsx            # Leitor de capítulos (teclado, navegação caps)
 │   │       └── loading.tsx
 │   ├── busca/
-│   │   └── page.tsx                # Página de busca
+│   │   └── page.tsx                # Página de busca com paginação
 │   └── api/
 │       ├── auth/
 │       │   └── [...nextauth]/
 │       │       └── route.ts        # NextAuth config
 │       └── cron/
 │           └── update-cache/
-│               └── route.ts        # Trigger do cron
+│               └── route.ts        # Trigger do cron (force-dynamic)
 ├── lib/
 │   ├── api/
-│   │   └── mangadex.ts            # Cliente MangaDex API
-│   ├── cache.ts                   # Cache layer (banco)
-│   ├── db.ts                      # Conexão com banco
-│   └── utils.ts                   # Helpers (formatação, etc.)
+│   │   └── mangadex.ts            # Cliente MangaDex API (retorna {data, total})
+│   ├── cache.ts                   # Cache layer (banco, TTL 30min)
+│   ├── db.ts                      # Conexão com banco (lazy init)
+│   └── utils.ts                   # Helpers (formatação, data, etc.)
 ├── components/
+│   ├── Pagination.tsx             # Componente de paginação compartilhado
 │   ├── MangaCard.tsx              # Card de mangá na grid
 │   ├── ChapterList.tsx            # Lista de capítulos
-│   ├── Reader.tsx                 # Leitor de imagens
+│   ├── Reader.tsx                 # Leitor (teclado, clique lateral, navegação caps)
 │   ├── Navbar.tsx                 # Navegação superior
-│   ├── SearchBar.tsx              # Input de busca
+│   ├── SearchBar.tsx              # Input de busca (mantém query)
 │   ├── LoadingSkeleton.tsx        # Skeleton de loading
 │   ├── ErrorMessage.tsx           # Mensagem de erro
 │   └── EmptyState.tsx             # Estado vazio
 ├── types/
-│   └── mangadex.ts               # Tipos TypeScript da API
+│   └── mangadex.ts               # Tipos TypeScript da API + helpers
 ├── db/
 │   └── migrate.ts                 # Script de migração
 ├── .env.local                     # Variáveis de ambiente (local)
 ├── .github/
 │   └── workflows/
-│       └── update-cache.yml       # GitHub Actions cron
+│       └── update-cache.yml       # GitHub Actions cron (usa CRON_SECRET + VERCEL_URL)
 ├── MEMORY.md                      # Este arquivo
 └── AGENTS.md                      # Instruções para IA
 ```
@@ -370,24 +371,29 @@ function slugify(title: string): string
 
 ## 🚧 Roadmap
 
-### Fase 1 (MVP) — MangaDex apenas ✅ EM ANDAMENTO
+### Fase 1 (MVP) — MangaDex apenas ✅ COMPLETO
 
 - [x] MEMORY.md criado
-- [ ] Setup Next.js + Tailwind + dependências
-- [ ] Schema do banco + migração
-- [ ] Cliente MangaDex API (lib/api/mangadex.ts)
-- [ ] Tipos TypeScript (types/mangadex.ts)
-- [ ] Cache layer (lib/cache.ts + lib/db.ts)
-- [ ] Componentes: Navbar, MangaCard, ChapterList, Reader, SearchBar, LoadingSkeleton
-- [ ] Página Home (lançamentos recentes em grid)
-- [ ] Página Mangá (detalhes + lista de capítulos)
-- [ ] Página Leitor (navegação entre páginas)
-- [ ] Página Busca (input + resultados)
-- [ ] Página 404 e Error Boundary
-- [ ] GitHub Actions cron (atualização a cada 30min)
-- [ ] API route /api/cron/update-cache
-- [ ] Deploy no Vercel
-- [ ] AGENTS.md para documentação técnica
+- [x] Setup Next.js + Tailwind + dependências
+- [x] Schema do banco + migração
+- [x] Cliente MangaDex API (lib/api/mangadex.ts)
+- [x] Tipos TypeScript (types/mangadex.ts)
+- [x] Cache layer (lib/cache.ts + lib/db.ts)
+- [x] Componentes: Navbar, MangaCard, ChapterList, Reader, SearchBar, LoadingSkeleton,
+      ErrorMessage, EmptyState, Pagination
+- [x] Página Home (lançamentos recentes em grid + paginação)
+- [x] Página Mangá (detalhes + lista de capítulos)
+- [x] Página Leitor (navegação entre páginas, teclado, capítulos)
+- [x] Página Busca (input + resultados + paginação)
+- [x] Página 404 e Error Boundary
+- [x] GitHub Actions cron (atualização a cada 30min)
+- [x] API route /api/cron/update-cache
+- [x] Deploy no Vercel
+- [x] AGENTS.md para documentação técnica
+- [x] GitHub Secrets configurados (CRON_SECRET, VERCEL_URL)
+- [x] Cron route fix (force-dynamic em vez de force-static)
+- [x] Paginação na Home e Busca
+- [x] Leitor: atalhos de teclado, navegação entre capítulos, Data Saver corrigido, scanlator
 
 ### Fase 2 — Multi-fontes
 
@@ -424,7 +430,8 @@ function slugify(title: string): string
 |---|---|---|
 | 2026-05-24 | Sessão 1 — Planejamento | Análise ecossistema BR, 112 extensões Tachiyomi, arquitetura definida |
 | 2026-05-24 | Sessão 2 — MVP | Next.js 16 criado, MangaDex API, cache Neon, todas as páginas, build ✅ |
-| 2026-05-24 | Sessão 3 — Anti-Contexto | AGENTS.md melhorado, SESSIONS.md, .env.example, scripts npm |
+| 2026-05-24 | Sessão 3 — Deploy | GitHub, Vercel, Neon, lazy db init, site ao vivo |
+| 2026-05-24 | Sessão 4 — Base Robusta | Infra (GitHub Secrets, cron route fix), paginação, leitor melhorado (teclado, navegação caps, Data Saver, scanlator), busca com query params |
 
 ---
 

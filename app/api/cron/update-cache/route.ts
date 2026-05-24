@@ -2,8 +2,7 @@ import { NextResponse } from "next/server"
 import { getLatestMangas } from "@/lib/api/mangadex"
 import { setMangaListCache } from "@/lib/db"
 
-export const dynamic = "force-static"
-export const revalidate = 0
+export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization")
@@ -17,9 +16,9 @@ export async function GET(request: Request) {
     const results: string[] = []
 
     for (let page = 1; page <= 3; page++) {
-      const mangas = await getLatestMangas(page, 100)
+      const { data: mangas, total } = await getLatestMangas(page, 100)
       const cacheKey = `latest:page:${page}`
-      await setMangaListCache(cacheKey, mangas)
+      await setMangaListCache(cacheKey, { data: mangas, total })
       results.push(`Página ${page}: ${mangas.length} mangás`)
     }
 

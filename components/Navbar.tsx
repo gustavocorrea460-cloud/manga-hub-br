@@ -12,7 +12,6 @@ export default function Navbar() {
     e.preventDefault()
     if (query.trim()) {
       router.push(`/busca?q=${encodeURIComponent(query.trim())}`)
-      setQuery("")
     }
   }
 

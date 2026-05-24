@@ -1,22 +1,33 @@
 import { Suspense } from "react"
 import SearchBar from "@/components/SearchBar"
 import MangaCard from "@/components/MangaCard"
+import Pagination from "@/components/Pagination"
 import ErrorMessage from "@/components/ErrorMessage"
 import EmptyState from "@/components/EmptyState"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { searchManga } from "@/lib/api/mangadex"
 
-async function SearchResults({ query }: { query: string }) {
+const LIMIT = 30
+
+async function SearchResults({
+  query,
+  page,
+}: {
+  query: string
+  page: number
+}) {
   if (!query.trim()) {
     return <EmptyState title="Digite algo para buscar" />
   }
 
-  let mangas
+  let result
   try {
-    mangas = await searchManga(query)
+    result = await searchManga(query, page, LIMIT)
   } catch {
     return <ErrorMessage message="Erro ao buscar. Tente novamente." />
   }
+
+  const { data: mangas, total } = result
 
   if (mangas.length === 0) {
     return (
@@ -30,13 +41,19 @@ async function SearchResults({ query }: { query: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        {mangas.length} resultado{mangas.length !== 1 ? "s" : ""} para &ldquo;{query}&rdquo;
+        {total} resultado{total !== 1 ? "s" : ""} para &ldquo;{query}&rdquo;
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {mangas.map(manga => (
           <MangaCard key={manga.id} manga={manga} />
         ))}
       </div>
+      <Pagination
+        currentPage={page}
+        total={total}
+        limit={LIMIT}
+        basePath={`/busca?q=${encodeURIComponent(query)}`}
+      />
     </div>
   )
 }
@@ -44,9 +61,10 @@ async function SearchResults({ query }: { query: string }) {
 export default async function BuscaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
-  const { q = "" } = await searchParams
+  const { q = "", page: pageStr } = await searchParams
+  const page = Math.max(1, Number(pageStr) || 1)
 
   return (
     <div className="space-y-6">
@@ -54,8 +72,8 @@ export default async function BuscaPage({
 
       <SearchBar initialQuery={q} />
 
-      <Suspense fallback={<MangaGridSkeleton />}>
-        <SearchResults query={q} />
+      <Suspense fallback={<MangaGridSkeleton />} key={`${q}-${page}`}>
+        <SearchResults query={q} page={page} />
       </Suspense>
     </div>
   )

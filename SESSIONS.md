@@ -11,6 +11,37 @@
 
 ---
 
+## Sessão 4 — 2026-05-24 | Base Robusta (Fase 1.5)
+
+**O que foi feito:**
+- **Infra:** Configurados GitHub Secrets (CRON_SECRET, VERCEL_URL) + Vercel env vars
+- **Fix:** Cron route — removido `force-static` (impedia validação de auth header)
+- **Paginação:** Componente `<Pagination>` compartilhado, Home e Busca com `?page=N`, limite de 30 itens por página, retorno do total de resultados da API
+- **Busca:** SearchBar mantém query no input após submit, query params preservados na URL
+- **Leitor — Data Saver corrigido:** `hash` agora é passada corretamente do `getChapterPages` até o componente Reader
+- **Leitor — teclado:** Setas ← → e Espaço para navegar entre páginas
+- **Leitor — navegação entre capítulos:** Botões "Cap. anterior" e "Próx. capítulo" aparecem na primeira/última página; navegação automática com setas ao chegar no fim/início
+- **Leitor — clique nas laterais:** Terço esquerdo = anterior, terço direito = próximo
+- **Leitor — scanlator:** Exibe nome do grupo tradutor no topo do leitor
+- **API client:** `getLatestMangas` e `searchManga` agora retornam `{ data, total }` em vez de `Manga[]` diretamente
+- **Cache layer:** Adaptado para armazenar o objeto `{ data, total }` e incluir `hash` nas pages
+
+**Decisões:**
+- `mangaId` passado como search param (`?mangaId=`) no leitor para permitir navegação entre capítulos sem reestruturar URLs
+- ChapterList atualizado para incluir `mangaId` nos links do leitor
+
+**Estado do build:** ✅ Compilando (Next.js 16 + TypeScript)
+
+**Próximos passos:**
+- Fase 2 — Modos de leitura (webtoon, página dupla, zoom/pan)
+- Fase 2 — Download de capítulos
+- Fase 3 — Multi-fontes (Comick, MangaFire)
+- Configurar domínio próprio
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 3 — 2026-05-24 | Deploy & Infra Completa
 
 **O que foi feito:**

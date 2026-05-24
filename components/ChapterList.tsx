@@ -21,7 +21,7 @@ export default function ChapterList({ chapters, mangaId }: Props) {
       {chapters.map(chapter => (
         <Link
           key={chapter.id}
-          href={`/leitor/${chapter.id}`}
+          href={`/leitor/${chapter.id}?mangaId=${mangaId}`}
           className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-white/5 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">

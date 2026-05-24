@@ -24,22 +24,23 @@ function isExpired(updatedAt: string): boolean {
 
 export async function getLatestMangasCached(
   page: number = 1,
-): Promise<Manga[]> {
+): Promise<{ data: Manga[]; total: number }> {
   const cacheKey = `latest:page:${page}`
 
   const cached = await getMangaListCache(cacheKey)
   if (cached && !isExpired(cached.updated_at as string)) {
-    return cached.data as Manga[]
+    const d = cached.data as { data: Manga[]; total: number }
+    return d
   }
 
   try {
-    const data = await getLatestMangas(page)
-    await setMangaListCache(cacheKey, data)
-    return data
+    const result = await getLatestMangas(page)
+    await setMangaListCache(cacheKey, result)
+    return result
   } catch {
     if (cached) {
       console.warn("API falhou, servindo cache expirado para:", cacheKey)
-      return cached.data as Manga[]
+      return cached.data as { data: Manga[]; total: number }
     }
     throw new Error("MangaDex API indisponível e nenhum cache encontrado")
   }
@@ -91,12 +92,12 @@ export async function getChaptersCached(
 
 export async function getChapterPagesCached(
   chapterId: string,
-): Promise<{ pages: string[]; dataSaver: string[]; baseUrl: string }> {
+): Promise<{ pages: string[]; dataSaver: string[]; baseUrl: string; hash: string }> {
   const cacheKey = `pages:${chapterId}`
 
   const cached = await getChapterCache(cacheKey)
   if (cached && !isExpired(cached.updated_at as string)) {
-    return cached.data as { pages: string[]; dataSaver: string[]; baseUrl: string }
+    return cached.data as { pages: string[]; dataSaver: string[]; baseUrl: string; hash: string }
   }
 
   try {
@@ -105,13 +106,14 @@ export async function getChapterPagesCached(
       pages: data.data,
       dataSaver: data.dataSaver,
       baseUrl: data.baseUrl,
+      hash: data.hash,
     }
     await setChapterCache(cacheKey, chapterId, result)
     return result
   } catch {
     if (cached) {
       console.warn("API falhou, servindo cache expirado para:", cacheKey)
-      return cached.data as { pages: string[]; dataSaver: string[]; baseUrl: string }
+      return cached.data as { pages: string[]; dataSaver: string[]; baseUrl: string; hash: string }
     }
     throw new Error("MangaDex API indisponível e nenhum cache encontrado")
   }
