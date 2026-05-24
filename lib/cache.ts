@@ -29,8 +29,11 @@ export async function getLatestMangasCached(
 
   const cached = await getMangaListCache(cacheKey)
   if (cached && !isExpired(cached.updated_at as string)) {
-    const d = cached.data as { data: Manga[]; total: number }
-    return d
+    const d = cached.data
+    if (Array.isArray(d)) {
+      return { data: d as Manga[], total: d.length }
+    }
+    return d as { data: Manga[]; total: number }
   }
 
   try {
@@ -40,7 +43,11 @@ export async function getLatestMangasCached(
   } catch {
     if (cached) {
       console.warn("API falhou, servindo cache expirado para:", cacheKey)
-      return cached.data as { data: Manga[]; total: number }
+      const d = cached.data
+      if (Array.isArray(d)) {
+        return { data: d as Manga[], total: d.length }
+      }
+      return d as { data: Manga[]; total: number }
     }
     throw new Error("MangaDex API indisponível e nenhum cache encontrado")
   }
