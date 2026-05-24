@@ -1,105 +1,149 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+<!-- ====================================================================== -->
+<!-- BOOT CHECKLIST — Leia isto PRIMEIRO ao iniciar uma nova sessão        -->
+<!-- ====================================================================== -->
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+# 🚀 BOOT — Manga Hub BR
 
-**Key breaking changes in this version (Next.js 16):**
-1. `params` and `searchParams` are `Promise<>` — must `await` them in pages and route handlers
-2. `cookies()` and `headers()` from `next/headers` are async — must `await`
-3. `middleware.ts` is deprecated — use `proxy.ts` with `export function proxy()`
-4. `next lint` command is removed — use `eslint` directly
-5. `sass-loader` v16 — tilde `~` imports not supported in Turbopack
-6. Static `GET` route handlers — use `export const dynamic = 'force-static'`
-7. `images.remotePatterns` (NOT `images.domains`)
-<!-- END:nextjs-agent-rules -->
+## 1. Protocolo de Retomada de Contexto
 
-<!-- BEGIN:project-context -->
-# Manga Hub BR — Projeto
+Se esta é uma nova sessão e você PRECISA RECUPERAR CONTEXTO:
 
-## Stack
-- **Framework:** Next.js 16.2.6 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS v4
-- **Database:** Neon PostgreSQL (serverless)
-- **Auth:** NextAuth.js v5 (beta)
-- **Deploy:** Vercel
+```markdown
+1. LEIA `MEMORY.md` — arquitetura, schema, decisões, roadmap
+2. LEIA `SESSIONS.md` — últimas ações, próximo passo, blockers
+3. LEIA `.env.example` — variáveis necessárias
+4. VERIFIQUE `npm run build` — se quebrou, diagnostique
+```
 
-## Estrutura de Pastas
+## 2. Auto-Sumário Obrigatório
+
+**AO FINAL DE CADA SESSÃO**, você DEVE:
+
+1. Adicionar entrada no **topo de `SESSIONS.md`** com:
+   - Data (ISO 8601)
+   - O que foi feito (lista)
+   - Decisões tomadas
+   - Estado do build (✅/❌)
+   - Próximos passos (priorizados)
+   - Blocadores
+
+2. Se algo QUEBROU, registre a causa e o que falta arrumar.
+
+## 3. Boot Checklist
+
+Antes de qualquer ação, verifique:
+
+- [ ] Já li `SESSIONS.md` para saber onde paramos?
+- [ ] Já li `MEMORY.md` para entender a arquitetura?
+- [ ] O build compila? (`npm run build`)
+- [ ] `.env.local` existe com DATABASE_URL válida?
+- [ ] Git está em estado limpo? (`git status`)
+
+<!-- ====================================================================== -->
+<!-- NEXT.JS 16 — BREAKING CHANGES (OBRIGATÓRIO)                           -->
+<!-- ====================================================================== -->
+
+## ⚠️ Next.js 16 — Breaking Changes
+
+**Leia `node_modules/next/dist/docs/` antes de escrever código novo.**
+
+| # | Mudança | Impacto |
+|---|---|---|
+| 1 | `params` e `searchParams` são `Promise<>` | **Sempre `await`** em pages e route handlers |
+| 2 | `cookies()` e `headers()` são async | **Sempre `await`** |
+| 3 | `middleware.ts` → `proxy.ts` | Renomear + export `proxy()` |
+| 4 | `next lint` removido | Usar `eslint` diretamente |
+| 5 | `images.domains` removido | Usar `images.remotePatterns` |
+| 6 | Cache GET handlers: `dynamic = 'force-static'` | Default é dinâmico |
+| 7 | `revalidateTag()` agora exige 2º argumento | `revalidateTag(tag, 'max')` |
+| 8 | Turbopack é default | Use `--webpack` se necessário |
+
+<!-- ====================================================================== -->
+<!-- PROJETO — CONTEXTO COMPLETO                                           -->
+<!-- ====================================================================== -->
+
+## 📋 Ficha Rápida
+
+| Item | Valor |
+|---|---|
+| Projeto | Manga Hub BR — agregador mangás PT-BR |
+| Stack | Next.js 16 + TypeScript + Tailwind CSS v4 |
+| DB | Neon PostgreSQL (serverless, free) |
+| Deploy | Vercel (free) |
+| Auth | NextAuth.js v5 |
+| Fonte | MangaDex API (primária) |
+| Cache | Tabelas PostgreSQL (TTL 30min) |
+| Cron | GitHub Actions (30min) |
+
+## 📁 Estrutura
+
 ```
 /
 ├── app/
-│   ├── page.tsx              # Home (lançamentos recentes)
-│   ├── layout.tsx            # Layout global com Navbar
-│   ├── globals.css           # Tema escuro + Tailwind
-│   ├── not-found.tsx         # 404
-│   ├── error.tsx             # Error boundary (client)
-│   ├── loading.tsx           # Loading global
-│   ├── manga/[slug]/
-│   │   ├── page.tsx          # Detalhes do mangá (id = slug)
-│   │   └── loading.tsx
-│   ├── leitor/[chapterId]/
-│   │   ├── page.tsx          # Leitor de capítulos
-│   │   └── loading.tsx
-│   ├── busca/
-│   │   └── page.tsx          # Busca com searchParams
+│   ├── page.tsx               # Home (lançamentos)
+│   ├── layout.tsx             # Layout + Navbar
+│   ├── globals.css            # Tema escuro + Tailwind
+│   ├── not-found.tsx / error.tsx / loading.tsx
+│   ├── manga/[slug]/page.tsx  # Detalhes do mangá
+│   ├── leitor/[chapterId]/page.tsx  # Leitor
+│   ├── busca/page.tsx         # Busca
 │   └── api/
 │       ├── auth/[...nextauth]/route.ts
 │       └── cron/update-cache/route.ts
-├── components/
-│   ├── Navbar.tsx            # Navegação + busca (client)
-│   ├── MangaCard.tsx         # Card de mangá (server)
-│   ├── ChapterList.tsx       # Lista de capítulos (server)
-│   ├── Reader.tsx            # Leitor de páginas (client)
-│   ├── SearchBar.tsx         # Input de busca (client)
-│   ├── LoadingSkeleton.tsx   # Skeletons de loading
-│   ├── ErrorMessage.tsx      # Mensagem de erro
-│   └── EmptyState.tsx        # Estado vazio
+├── components/                # 8 componentes
+│   ├── Navbar.tsx (client)
+│   ├── MangaCard.tsx (server)
+│   ├── ChapterList.tsx (server)
+│   ├── Reader.tsx (client)
+│   └── SearchBar.tsx (client)
 ├── lib/
-│   ├── api/mangadex.ts       # Cliente MangaDex API
-│   ├── cache.ts              # Cache layer (Neon → API → Neon)
-│   ├── db.ts                 # Conexão + queries Neon SQL
-│   └── utils.ts              # Formatação, helpers
-├── types/
-│   └── mangadex.ts           # Tipos + helpers (getTitle, getCoverUrl, etc.)
-├── db/
-│   └── migrate.ts            # Script de migração do banco
-├── .env.local                # Variáveis de ambiente (template)
-├── .github/workflows/update-cache.yml  # Cron 30min
-├── MEMORY.md                 # Documentação completa do projeto
-└── AGENTS.md                 # Instruções para IA (este arquivo)
+│   ├── api/mangadex.ts        # Cliente MangaDex
+│   ├── cache.ts               # Cache layer
+│   ├── db.ts                  # Neon SQL queries
+│   └── utils.ts               # Helpers (date, format)
+├── types/mangadex.ts          # Tipos + helpers
+├── db/migrate.ts              # Migration script
+├── .env.example               # Template de variáveis
+├── MEMORY.md                  # Documentação completa
+├── SESSIONS.md                # Log de sessões (append-only)
+└── AGENTS.md                  # Este arquivo
 ```
 
-## Estado Atual
-- [x] MEMORY.md criado
-- [x] Setup Next.js + Tailwind + dependências
-- [x] Schema do banco + migração
-- [x] Cliente MangaDex API (lib/api/mangadex.ts)
-- [x] Tipos TypeScript (types/mangadex.ts)
-- [x] Cache layer (lib/cache.ts + lib/db.ts)
-- [x] Componentes: Navbar, MangaCard, ChapterList, Reader, SearchBar, LoadingSkeleton, ErrorMessage, EmptyState
-- [x] Página Home (lançamentos recentes em grid)
-- [x] Página Mangá (detalhes + lista de capítulos)
-- [x] Página Leitor (navegação entre páginas)
-- [x] Página Busca (input + resultados)
-- [x] Página 404, Error Boundary, Loading global
-- [x] GitHub Actions cron (atualização a cada 30min)
-- [x] API route /api/cron/update-cache
-- [ ] Deploy no Vercel
-- [ ] Configurar Neon PostgreSQL
-- [ ] Conectar domínio
+## 🧠 Convenções de Código
 
-## Próximos Passos
-1. Criar conta Neon (https://neon.tech) e obter DATABASE_URL
-2. Rodar `npx tsx db/migrate.ts` para criar tabelas
-3. Fazer deploy no Vercel (via GitHub)
-4. Configurar CRON_SECRET e VERCEL_URL nos secrets do GitHub
-5. Configurar domínio no registro.br
+```typescript
+// IMPORTS: absolute com @/
+import { x } from "@/lib/utils"
+import type { Manga } from "@/types/mangadex"
 
-## Convenções de Código
-- `params` e `searchParams` são `Promise<>` — sempre `await`
-- Componentes com estado/eventos → `"use client"`
-- Páginas → Server Components (fetch + Suspense)
-- Tema escuro por padrão (variáveis CSS em globals.css)
-- Cores: bg=#0f0f0f, fg=#f5f5f5, accent=#6c5ce7 (roxo)
-- MangaDex API sempre com `availableTranslatedLanguage[]=pt-br`
-<!-- END:project-context -->
+// PARAMS/SearchParams (NEXT.JS 16): sempre Promise, sempre await
+export default async function Page({
+  params,
+}: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+}
+
+// CLIENT COMPONENTS: só quando precisar de estado/eventos
+"use client"
+import { useState } from "react"
+
+// CSS: Tailwind utility classes, sem CSS modules
+// TEMA: bg-background (#0f0f0f), text-foreground (#f5f5f5), accent (#6c5ce7)
+// MANGADEX: sempre with availableTranslatedLanguage[]=pt-br
+```
+
+## 📦 Comandos Úteis
+
+```bash
+npm run dev          # Dev server (http://localhost:3000)
+npm run build        # Build de produção
+npm run db:migrate   # Rodar migrations no Neon (precisa DATABASE_URL)
+npm run typecheck    # TypeScript check sem build
+npm run lint         # ESLint
+```
+
+## 🔗 Referências
+
+- MangaDex API: https://api.mangadex.org/docs/
+- Neon: https://neon.tech
+- Next.js 16 docs: `node_modules/next/dist/docs/`

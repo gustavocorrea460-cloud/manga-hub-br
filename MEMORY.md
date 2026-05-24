@@ -416,12 +416,15 @@ function slugify(title: string): string
 
 ---
 
-## 📝 Log de Sessões
+> 📌 **Log de sessões detalhado em `SESSIONS.md`** (append-only, nunca editado)
 
-| Data | Sessão | Decisões/Progresso |
+## 📝 Log de Sessões (resumo)
+
+| Data | Sessão | Resumo |
 |---|---|---|
-| 2026-05-24 | Sessão 1 — Planejamento | Análise do ecossistema BR, mapeamento de 112 extensões Tachiyomi, definição de arquitetura com 3 fontes, escolha de MangaDex como fonte primária. |
-| 2026-05-24 | Sessão 2 — Aprovação | Usuário aprovou MVP focado em MangaDex. MEMORY.md criado como banco de memória. Início da implementação. |
+| 2026-05-24 | Sessão 1 — Planejamento | Análise ecossistema BR, 112 extensões Tachiyomi, arquitetura definida |
+| 2026-05-24 | Sessão 2 — MVP | Next.js 16 criado, MangaDex API, cache Neon, todas as páginas, build ✅ |
+| 2026-05-24 | Sessão 3 — Anti-Contexto | AGENTS.md melhorado, SESSIONS.md, .env.example, scripts npm |
 
 ---
 

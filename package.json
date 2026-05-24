@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "npx tsx db/migrate.ts",
+    "setup": "cp -n .env.example .env.local && echo '.env.local criado. Edite com suas credenciais.'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
