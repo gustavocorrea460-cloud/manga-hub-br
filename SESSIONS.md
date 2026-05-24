@@ -11,6 +11,41 @@
 
 ---
 
+## Sessão 13 — 2026-05-24 | MangaStop.net Scraper + 3-fontes Source Toggle
+
+**O que foi feito:**
+- **Engenharia reversa completa do MangaStop.net** — tema `mangareader` v2.2.2 (WordPress), CDN dupla: proxy `images.mangastop.net` (protegida: Referer + token Base64) + origin `comick.jeffersondev.xyz` (sem proteção)
+- **Tipos criados** (`types/mangastop.ts`) — `MangaStopSearchResult`, `MangaStopManga`, `MangaStopChapter`, helpers `extractSlug()`, `extractChapterNumber()`
+- **Scraper criado** (`lib/api/mangastop.ts`):
+  - `searchManga(query)` → WordPress search `/?s={query}` — extrai links `/manga/{slug}/`
+  - `getManga(slug)` → parse `/manga/{slug}/` — título, capa, status, tipo, autor, gêneros, descrição
+  - `getChapters(slug)` → parse `#chapterlist ul.clstyle li a[href*="-capitulo-"]` — número, título, data, URL
+  - `getChapterImages(chapterUrlPath)` → fetch chapter page → regex `_ts_internal_config` → `atob(token)` → URLs do `comick.jeffersondev.xyz` (origin CDN, sem hotlink)
+- **Unified adapter atualizado** (`lib/sources.ts`) — `SourceId` estendido para `"mangastop"`, funções `searchMangaStop()`, `getMangaMangaStop()`, suporte em `getChaptersSource()`, `getChapterPagesSource()`, `getSourceLabel()`
+- **Source toggle atualizado** (`app/busca/page.tsx`) — 3 fontes: MangaDex ↔ MangaFire ↔ MangaStop
+- **Manga detail MangaStop** (`app/manga/[slug]/page.tsx`) — `MangaDetailMangaStop` + `ChaptersSectionMangaStop`
+- **Reader MangaStop** (`app/leitor/[chapterId]/page.tsx`) — `MangaStopReader` + `getPrevNextMangaStop()`, usa `absoluteUrls` (origin CDN sem proteção)
+- **Documentação atualizada** — MEMORY.md (roadmap ✅), AGENTS.md (convenções), SESSIONS.md (esta sessão)
+- **Build: ✅** compila sem erros (8 routes)
+
+**Decisões:**
+- MangaStop implementado DEPOIS do MangaFire (conforme planejado no roadmap)
+- `getChapterImages()` decodifica `_token` via `atob()` no servidor — não expõe o proxy protegido ao cliente, serve URLs diretas do origin CDN
+- Origin CDN (`comick.jeffersondev.xyz`) não tem hotlink protection — imagens vão direto pro `<img>` sem precisar de proxy
+- Não implementado cache PostgreSQL para MangaStop ainda (será feito na fase de cache multi-source)
+- Não implementada paginação na busca do MangaStop (WordPress search é paginada mas simplificamos para página 1)
+
+**Próximos passos:**
+- [ ] Cache PostgreSQL para MangaFire e MangaStop (source prefix nas chaves)
+- [ ] Source indicator nos MangaCards (badge visual de qual fonte)
+- [ ] Testar MangaStop reader no ar (verificar se imagens carregam sem proxy)
+- [ ] LeituraManga.net scraper
+- [ ] Script de dump do catálogo do MangaStop (metadados para PostgreSQL)
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 12 — 2026-05-24 | MangaFire Scraper + Multi-source Integration
 
 **O que foi feito:**

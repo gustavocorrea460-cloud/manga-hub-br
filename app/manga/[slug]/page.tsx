@@ -7,6 +7,7 @@ import ErrorMessage from "@/components/ErrorMessage"
 import { ChapterListSkeleton, MangaDetailSkeleton } from "@/components/LoadingSkeleton"
 import { getMangaCached, getChaptersCached } from "@/lib/cache"
 import * as mangafire from "@/lib/api/mangafire"
+import * as mangastop from "@/lib/api/mangastop"
 import {
   getTitle,
   getDescription,
@@ -17,8 +18,9 @@ import {
 import { formatDate } from "@/lib/utils"
 import type { Chapter } from "@/types/mangadex"
 import type { MangaFireChapter } from "@/types/mangafire"
+import type { MangaStopChapter } from "@/types/mangastop"
 
-type SourceId = "mangadex" | "mangafire"
+type SourceId = "mangadex" | "mangafire" | "mangastop"
 
 async function MangaDetailMangaDex({ mangaId }: { mangaId: string }) {
   let manga
@@ -274,6 +276,137 @@ async function ChaptersSectionMangaFire({ mangaId }: { mangaId: string }) {
   )
 }
 
+async function MangaDetailMangaStop({ mangaId }: { mangaId: string }) {
+  let manga
+  try {
+    manga = await mangastop.getManga(mangaId)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no MangaStop." />
+  }
+
+  return (
+    <>
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
+        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
+          {manga.coverUrl ? (
+            <Image
+              src={manga.coverUrl}
+              alt={manga.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 256px"
+              className="object-cover"
+              priority
+              unoptimized
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted text-sm">
+              Sem capa
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 min-w-0">
+          <h1 className="text-2xl font-bold">{manga.title}</h1>
+
+          <div className="flex flex-wrap gap-2">
+            {manga.status && (
+              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
+                {manga.status}
+              </span>
+            )}
+            {manga.type && (
+              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
+                {manga.type}
+              </span>
+            )}
+            {manga.year && (
+              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
+                {manga.year}
+              </span>
+            )}
+          </div>
+
+          {manga.author && (
+            <p className="text-sm text-muted">
+              Autor: <span className="text-foreground">{manga.author}</span>
+            </p>
+          )}
+
+          {manga.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {manga.genres.map(g => (
+                <span
+                  key={g}
+                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {manga.description && (
+            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
+              {manga.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Capítulos</h2>
+          <span className="text-[10px] text-muted bg-card px-2 py-0.5 rounded border border-border">
+            MangaStop
+          </span>
+        </div>
+        <Suspense fallback={<ChapterListSkeleton />}>
+          <ChaptersSectionMangaStop mangaId={mangaId} />
+        </Suspense>
+      </section>
+    </>
+  )
+}
+
+async function ChaptersSectionMangaStop({ mangaId }: { mangaId: string }) {
+  let chapters: MangaStopChapter[]
+  try {
+    chapters = await mangastop.getChapters(mangaId)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar os capítulos." />
+  }
+
+  if (chapters.length === 0) {
+    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
+  }
+
+  return (
+    <div className="space-y-1">
+      {chapters.map(ch => (
+        <Link
+          key={ch.chapterId}
+          href={`/leitor/${encodeURIComponent(ch.chapterId)}?mangaId=${mangaId}&source=mangastop`}
+          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-sm font-medium text-foreground shrink-0">
+              Cap. {ch.number}
+            </span>
+            {ch.title && (
+              <span className="text-sm text-muted truncate">{ch.title}</span>
+            )}
+          </div>
+          {ch.date && (
+            <span className="text-[11px] text-muted shrink-0 ml-2">
+              {ch.date}
+            </span>
+          )}
+        </Link>
+      ))}
+    </div>
+  )
+}
+
 export default async function MangaPage({
   params,
   searchParams,
@@ -282,11 +415,15 @@ export default async function MangaPage({
   searchParams: Promise<{ source?: string }>
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
-  const source = (sp.source as SourceId) === "mangafire" ? "mangafire" : "mangadex"
+  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : "mangadex"
 
   if (!slug) notFound()
 
-  const DetailComponent = source === "mangafire" ? MangaDetailMangaFire : MangaDetailMangaDex
+  const DetailComponent = source === "mangafire"
+    ? MangaDetailMangaFire
+    : source === "mangastop"
+      ? MangaDetailMangaStop
+      : MangaDetailMangaDex
 
   return (
     <Suspense fallback={<MangaDetailSkeleton />}>

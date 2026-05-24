@@ -122,13 +122,19 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Estrutura:** HTML com IDs previsíveis (`#top-trending`, `#most-viewed`, `.description`, etc.)
 - **Cache:** Mesmo layer PostgreSQL (TTL 30min), chave composta `{source, id}`
 
-### Fallback BR primário: MangaStop.net (fase 2.5)
-- **Site:** https://mangastop.net — WordPress + MangaThemesia, maior acervo BR vivo
-- **Abordagem:** Scraping TS + cheerio (WordPress com tema conhecido)
-- **Cloudflare:** Presente, mas bypassável via fetch direto
+### Fallback BR primário: MangaStop.net (fase 2.5) ✅ IMPLEMENTADO
+- **Site:** https://mangastop.net — WordPress + tema mangareader v2.2.2, maior acervo BR vivo
+- **Abordagem:** Scraping TS + cheerio (WordPress com tema previsível)
+- **Cloudflare:** Presente, mas bypassável via fetch
 - **Discord:** 9k+ membros, ativo
 - **Issue keiyoushi:** #9516 (solicitação de extensão Mihon, aguardando)
-- **Engenharia reversa concluída:** URLs documentadas em RESEARCH.md §9
+- **Engenharia reversa concluída e implementada:** URLs documentadas em RESEARCH.md §9
+- **Endpoints do scraper:** `searchManga()`, `getManga()`, `getChapters()`, `getChapterImages()`
+- **Busca:** WordPress native `/?s={query}`
+- **Detalhes:** `/manga/{slug}/` — extrai HTML com cheerio (título, capa, status, autor, gêneros, descrição, lista de capítulos)
+- **Capítulos:** extraídos de `#chapterlist` / `ul.clstyle li a[href*="-capitulo-"]`
+- **Páginas:** Fetch da página do capítulo → regex `_ts_internal_config` → `atob(token)` → URLs do `comick.jeffersondev.xyz` (origin CDN sem proteção)
+- **Proxy de imagens:** Desnecessário — origin CDN não tem hotlink protection, URLs decodificadas vão direto pro `<img>`
 
 ### Fallback BR secundário: LeituraManga.net (fase 3)
 - **Site:** https://leituramanga.net — HTML próprio, design simples
@@ -264,7 +270,8 @@ CREATE TABLE IF NOT EXISTS reading_history (
 ├── lib/
 │   ├── api/
 │   │   ├── mangadex.ts            # Cliente MangaDex API (retorna {data, total})
-│   │   └── mangafire.ts           # Scraper MangaFire (cheerio, AJAX, proxy)
+│   │   ├── mangafire.ts           # Scraper MangaFire (cheerio, AJAX, proxy)
+│   │   └── mangastop.ts           # Scraper MangaStop.net (cheerio, _ts_internal_config)
 │   ├── cache.ts                   # Cache layer (banco, TTL 30min)
 │   ├── db.ts                      # Conexão com banco (lazy init)
 │   ├── sources.ts                 # Unified adapter multi-source
@@ -281,7 +288,8 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   └── EmptyState.tsx             # Estado vazio
 ├── types/
 │   ├── mangadex.ts               # Tipos TypeScript da API + helpers
-│   └── mangafire.ts              # Tipos MangaFire scraper + helpers
+│   ├── mangafire.ts              # Tipos MangaFire scraper + helpers
+│   └── mangastop.ts              # Tipos MangaStop scraper + helpers
 ├── db/
 │   └── migrate.ts                 # Script de migração
 ├── .env.local                     # Variáveis de ambiente (local)
@@ -337,11 +345,11 @@ CREATE TABLE IF NOT EXISTS reading_history (
 - Agregadores gringos com PT-BR (Comick, MangaFire, Bato.to) ficam como fallback secundário
 
 ### Estratégia de Fontes (hierarquia — revisada 2026-05-24)
-1. **MangaDex API** — primária, já implementada
-2. **MangaFire** — fallback principal (gringo com PT-BR via scraping)
-3. **MangaStop.net** — fallback BR primário (WordPress MangaThemesia, Cloudflare)
-4. **LeituraManga.net** — fallback BR secundário
-5. **QueroLer.com** — fallback BR complementar
+1. **MangaDex API** — primária, já implementada ✅
+2. **MangaFire** — fallback principal (gringo com PT-BR via scraping) ✅
+3. **MangaStop.net** — fallback BR primário (WordPress mangareader, Cloudflare) ✅
+4. **LeituraManga.net** — fallback BR secundário (pendente)
+5. **QueroLer.com** — fallback BR complementar (pendente)
 6. **MangaPlus** — oficial Shueisha (capítulos recentes PT-BR)
 7. **MangaFox** — fallback EN apenas
 8. **Scanlators individuais BR** — apenas sob demanda
@@ -519,7 +527,7 @@ function slugify(title: string): string
 - [x] **Integração MangaFire** (scraper + cache, prioridade máxima — API wrapper existente) ✅
 - [x] Image proxy /api/proxy (para imagens com proteção CORS/hotlink) ✅
 - [x] Source switch param (?source=mangadex|mangafire|mangastop) ✅
-- [ ] **Integração MangaStop.net** (cheerio + WordPress MangaThemesia)
+- [x] **Integração MangaStop.net** (cheerio + WordPress mangareader theme) ✅
 - [ ] Source indicator UI (mostrar qual fonte serviu cada capítulo/dado)
 - [ ] Cache PostgreSQL para MangaFire (integração com cache layer existente)
 - [ ] Integração LeituraManga.net

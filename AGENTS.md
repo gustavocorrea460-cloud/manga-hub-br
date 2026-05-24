@@ -86,7 +86,7 @@ Antes de qualquer ação, verifique:
 | DB | Neon PostgreSQL (serverless, free) |
 | Deploy | Vercel (free) — https://manga-hub-br.vercel.app |
 | Auth | NextAuth.js v5 (estrutura, sem providers ainda) |
-| Fontes | MangaDex API (primária) + MangaFire scraper (fallback) |
+| Fontes | MangaDex API (primária) + MangaFire scraper (fallback) + MangaStop.net (fallback BR) |
 | Cache | Tabelas PostgreSQL (TTL 30min) com fallback expirado |
 | Cron | GitHub Actions (30min) — CRON_SECRET + VERCEL_URL configurados |
 | Repo | https://github.com/gustavocorrea460-cloud/manga-hub-br |
@@ -100,9 +100,9 @@ Antes de qualquer ação, verifique:
 - Cache PostgreSQL com fallback se API cair
 - Tema escuro (#0f0f0f + accent roxo #6c5ce7)
 - Cron de atualização automática (GitHub Actions a cada 30min)
-- **Multi-source**: `?source=mangafire` na busca, detalhes e leitor
+- **Multi-source**: `?source=mangafire|mangastop` na busca, detalhes e leitor
 - **Image proxy**: `/api/proxy?url=` para bypass de CORS/hotlink
-- **Source toggle** na página de busca (MangaDex ↔ MangaFire)
+- **Source toggle** na página de busca (MangaDex ↔ MangaFire ↔ MangaStop)
 
 ## 📁 Estrutura
 
@@ -133,13 +133,15 @@ Antes de qualquer ação, verifique:
 ├── lib/
 │   ├── api/mangadex.ts             # Cliente MangaDex ({ data, total })
 │   ├── api/mangafire.ts            # Scraper MangaFire (cheerio + AJAX)
+│   ├── api/mangastop.ts            # Scraper MangaStop.net (cheerio + _ts_internal_config)
 │   ├── cache.ts                    # Cache layer (TTL 30min, fallback)
 │   ├── sources.ts                  # Unified adapter multi-source
 │   ├── db.ts                       # Neon SQL queries (lazy init)
 │   └── utils.ts                    # Helpers (date, format, cn)
 ├── types/
 │   ├── mangadex.ts                 # Tipos + helpers (getTitle, getScanlatorName...)
-│   └── mangafire.ts                # Tipos MangaFire scraper
+│   ├── mangafire.ts                # Tipos MangaFire scraper
+│   └── mangastop.ts                # Tipos MangaStop scraper
 ├── db/migrate.ts                   # Migration script
 ├── .env.example                    # Template de variáveis
 ├── MEMORY.md                       # Documentação completa
@@ -171,14 +173,20 @@ import { useState } from "react"
 // MANGADEX: sempre with availableTranslatedLanguage[]=pt-br
 // API RETURN: getLatestMangas/searchManga → { data: Manga[], total: number }
 // LEITOR: mangaId passado como ?mangaId= no search param
-// MULTI-SOURCE: parâmetro ?source=mangadex|mangafire nas páginas
+// MULTI-SOURCE: parâmetro ?source=mangadex|mangafire|mangastop nas páginas
 // MANGA FIRE: scraper via cheerio + AJAX endpoints (/ajax/read/...)
 //   search: /filter?keyword=X&page=N
 //   detail: /manga/{id}
 //   chapters: /ajax/read/{numId}/chapter/{lang}  (GET, JSON response)
 //   pages: /ajax/read/chapter/{chapterId}  (GET, JSON response)
 //   proxy: /api/proxy?url=X (imagens com hotlink protection)
-// SOURCE TOGGLE: componente SourceToggle disponível em /busca
+// MANGA STOP: scraper via cheerio (WordPress mangareader theme)
+//   search: /?s={query}  (WordPress native search)
+//   detail: /manga/{slug}/
+//   chapters: parse from #chapterlist / ul.clstyle
+//   pages: fetch chapter page, extract _ts_internal_config, atob(token)
+//   origin CDN: comick.jeffersondev.xyz (no hotlink — URLs diretas no <img>)
+// SOURCE TOGGLE: componente SourceToggle disponível em /busca (3 fontes)
 // IMAGE PROXY: /api/proxy?url= para CORS/hotlink bypass (mangafire.to)
 ```
 

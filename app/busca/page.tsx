@@ -10,12 +10,13 @@ import EmptyState from "@/components/EmptyState"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { searchMangaWithFilters } from "@/lib/api/mangadex"
 import * as mangafire from "@/lib/api/mangafire"
+import * as mangastop from "@/lib/api/mangastop"
 import { getTagsCached } from "@/lib/cache"
 import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/mangadex"
 
 const LIMIT = 30
 
-type SourceId = "mangadex" | "mangafire"
+type SourceId = "mangadex" | "mangafire" | "mangastop"
 
 function parseFilters(
   params: Awaited<SearchParamsType>,
@@ -38,7 +39,7 @@ function parseFilters(
     includedTags: includedTags && includedTags.length > 0 ? includedTags : undefined,
     excludedTags: excludedTags && excludedTags.length > 0 ? excludedTags : undefined,
     page: Math.max(1, Number(params.page) || 1),
-    source: (params.source as SourceId) === "mangafire" ? "mangafire" : "mangadex",
+    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : "mangadex",
   }
 }
 
@@ -58,6 +59,10 @@ async function SearchResults({ filters }: { filters: ReturnType<typeof parseFilt
 
   if (source === "mangafire") {
     return <MangaFireResults query={filters.q || ""} page={filters.page} />
+  }
+
+  if (source === "mangastop") {
+    return <MangaStopResults query={filters.q || ""} />
   }
 
   let result
@@ -202,6 +207,64 @@ async function MangaFireResults({ query, page }: { query: string; page: number }
   )
 }
 
+async function MangaStopResults({ query }: { query: string }) {
+  if (!query) {
+    return <EmptyState title="Digite um termo para buscar no MangaStop" />
+  }
+
+  let results
+  try {
+    results = await mangastop.searchManga(query)
+  } catch {
+    return <ErrorMessage message="Erro ao buscar no MangaStop. Tente novamente." />
+  }
+
+  if (results.length === 0) {
+    return <EmptyState title={`Nenhum resultado para "${query}" no MangaStop`} />
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">
+        {results.length} resultado{results.length !== 1 ? "s" : ""}
+        {query ? ` para "${query}"` : ""}
+        {" "}— Fonte: <span className="text-accent font-medium">MangaStop</span>
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {results.map(r => (
+          <Link
+            key={r.id}
+            href={`/manga/${r.id}?source=mangastop`}
+            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
+          >
+            <div className="relative aspect-[3/4] overflow-hidden bg-card">
+              {r.coverUrl ? (
+                <Image
+                  src={r.coverUrl}
+                  alt={r.title || ""}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 16vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted text-xs">
+                  Sem capa
+                </div>
+              )}
+            </div>
+            <div className="px-2 pb-2">
+              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
+                {r.title}
+              </h3>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 async function FiltersSection() {
   const tags = await getTagsCached()
   return <SearchFilters tags={tags} />
@@ -214,7 +277,7 @@ export default async function BuscaPage({
 }) {
   const params = await searchParams
   const filters = parseFilters(params)
-  const source = params.source === "mangafire" ? "mangafire" : "mangadex"
+  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : "mangadex"
 
   return (
     <div className="space-y-6">
@@ -266,6 +329,16 @@ function SourceToggle({ current, query }: { current: string; query?: string }) {
         }`}
       >
         MangaFire
+      </Link>
+      <Link
+        href={`${baseUrl}&source=mangastop`}
+        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+          current === "mangastop"
+            ? "bg-accent text-white"
+            : "bg-card border border-border text-muted hover:text-foreground"
+        }`}
+      >
+        MangaStop
       </Link>
     </div>
   )
