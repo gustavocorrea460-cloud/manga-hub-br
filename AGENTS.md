@@ -80,19 +80,19 @@ Antes de qualquer ação, verifique:
 ## 📋 Ficha Rápida
 
 | Item | Valor |
-|---|---|
+|---|---|---|
 | Projeto | Manga Hub BR — agregador mangás PT-BR |
 | Stack | Next.js 16 + TypeScript + Tailwind CSS v4 |
 | DB | Neon PostgreSQL (serverless, free) |
 | Deploy | Vercel (free) — https://manga-hub-br.vercel.app |
 | Auth | NextAuth.js v5 (estrutura, sem providers ainda) |
-| Fonte | MangaDex API (primária) — retorna `{ data, total }` |
+| Fontes | MangaDex API (primária) + MangaFire scraper (fallback) |
 | Cache | Tabelas PostgreSQL (TTL 30min) com fallback expirado |
 | Cron | GitHub Actions (30min) — CRON_SECRET + VERCEL_URL configurados |
 | Repo | https://github.com/gustavocorrea460-cloud/manga-hub-br |
 | Plan Mode | `/plan` para planejar, sem edições |
 
-### Features implementadas (Fase 1 + 1.5)
+### Features implementadas (Fase 1 + 1.5 + Multi-source)
 - Home com grid de lançamentos + paginação (`?page=N`)
 - Detalhes do mangá (capa, status, tags, autor, descrição, scanlators)
 - Leitor com: teclado (← → Espaço), clique lateral, navegação entre caps, Data Saver, scanlator visível
@@ -100,6 +100,9 @@ Antes de qualquer ação, verifique:
 - Cache PostgreSQL com fallback se API cair
 - Tema escuro (#0f0f0f + accent roxo #6c5ce7)
 - Cron de atualização automática (GitHub Actions a cada 30min)
+- **Multi-source**: `?source=mangafire` na busca, detalhes e leitor
+- **Image proxy**: `/api/proxy?url=` para bypass de CORS/hotlink
+- **Source toggle** na página de busca (MangaDex ↔ MangaFire)
 
 ## 📁 Estrutura
 
@@ -112,26 +115,31 @@ Antes de qualquer ação, verifique:
 │   ├── not-found.tsx / error.tsx / loading.tsx
 │   ├── manga/[slug]/page.tsx       # Detalhes do mangá
 │   ├── leitor/[chapterId]/page.tsx # Leitor (teclado, navegação caps)
-│   ├── busca/page.tsx              # Busca com paginação
+│   ├── busca/page.tsx              # Busca com paginação + source toggle
 │   └── api/
 │       ├── auth/[...nextauth]/route.ts
-│       └── cron/update-cache/route.ts  # force-dynamic
+│       ├── cron/update-cache/route.ts  # force-dynamic
+│       └── proxy/route.ts              # Image proxy CORS (force-dynamic)
 ├── components/
 │   ├── Pagination.tsx              # Paginação compartilhada
 │   ├── MangaCard.tsx               # Card de mangá na grid
 │   ├── ChapterList.tsx             # Lista de capítulos
-│   ├── Reader.tsx                  # Leitor (teclado, clique lateral, navegação caps)
+│   ├── Reader.tsx                  # Leitor (suporta absoluteUrls)
 │   ├── Navbar.tsx                  # Navbar com busca inline
-│   ├── SearchBar.tsx               # Input de busca (mantém query)
+│   ├── SearchBar.tsx               # Input de busca (mantém query + source)
 │   ├── LoadingSkeleton.tsx         # Skeletons
 │   ├── ErrorMessage.tsx            # Mensagem de erro
 │   └── EmptyState.tsx              # Estado vazio
 ├── lib/
 │   ├── api/mangadex.ts             # Cliente MangaDex ({ data, total })
+│   ├── api/mangafire.ts            # Scraper MangaFire (cheerio + AJAX)
 │   ├── cache.ts                    # Cache layer (TTL 30min, fallback)
+│   ├── sources.ts                  # Unified adapter multi-source
 │   ├── db.ts                       # Neon SQL queries (lazy init)
 │   └── utils.ts                    # Helpers (date, format, cn)
-├── types/mangadex.ts               # Tipos + helpers (getTitle, getScanlatorName...)
+├── types/
+│   ├── mangadex.ts                 # Tipos + helpers (getTitle, getScanlatorName...)
+│   └── mangafire.ts                # Tipos MangaFire scraper
 ├── db/migrate.ts                   # Migration script
 ├── .env.example                    # Template de variáveis
 ├── MEMORY.md                       # Documentação completa
@@ -163,6 +171,15 @@ import { useState } from "react"
 // MANGADEX: sempre with availableTranslatedLanguage[]=pt-br
 // API RETURN: getLatestMangas/searchManga → { data: Manga[], total: number }
 // LEITOR: mangaId passado como ?mangaId= no search param
+// MULTI-SOURCE: parâmetro ?source=mangadex|mangafire nas páginas
+// MANGA FIRE: scraper via cheerio + AJAX endpoints (/ajax/read/...)
+//   search: /filter?keyword=X&page=N
+//   detail: /manga/{id}
+//   chapters: /ajax/read/{numId}/chapter/{lang}  (GET, JSON response)
+//   pages: /ajax/read/chapter/{chapterId}  (GET, JSON response)
+//   proxy: /api/proxy?url=X (imagens com hotlink protection)
+// SOURCE TOGGLE: componente SourceToggle disponível em /busca
+// IMAGE PROXY: /api/proxy?url= para CORS/hotlink bypass (mangafire.to)
 ```
 
 ## 📦 Comandos Úteis

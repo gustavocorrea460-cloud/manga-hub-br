@@ -11,6 +11,81 @@
 
 ---
 
+## Sessão 12 — 2026-05-24 | MangaFire Scraper + Multi-source Integration
+
+**O que foi feito:**
+- **MangaFire scraper criado** (`lib/api/mangafire.ts`) — cheerio + AJAX endpoints
+  - `searchManga(query, page)` → scrape `/filter?keyword=X&page=N`
+  - `getManga(id)` → scrape `/manga/{id}` (título, poster, status, gêneros, descrição)
+  - `getChapters(mangaId, lang)` → AJAX `/ajax/read/{numId}/chapter/{lang}` (JSON)
+  - `getChapterImages(chapterId)` → AJAX `/ajax/read/chapter/{chapterId}` (JSON)
+  - `getCoverUrl(manga)` → normalize poster URL
+- **Image proxy criado** (`app/api/proxy/route.ts`) — fetch com `Referer: mangafire.to` + CORS headers
+- **Source toggle** adicionado à página de busca (`/busca?source=mangafire`)
+  - Componente `SourceToggle` — switch MangaDex ↔ MangaFire
+  - `MangaFireResults` — grid de resultados com capa, título, tipo
+  - Preserva query na troca de fonte
+- **MangaFire detail page** (`/manga/{slug}?source=mangafire`)
+  - Renderiza dados do MangaFire (título, altTitles, poster, status, tipo, autor, gêneros, descrição)
+  - Lista de capítulos com link para leitor MangaFire
+  - Badge indicador de fonte (MangaFire / MangaDex)
+- **Reader com suporte absoluteUrls** (`/leitor/{chapterId}?source=mangafire`)
+  - Reader component aceita `absoluteUrls` prop
+  - MangaFire leitor navega entre capítulos
+- **Unified adapter** (`lib/sources.ts`) — `searchSource()`, `getMangaSource()`, `getChaptersSource()`
+- **Bibliotecas instaladas:** cheerio
+- **MEMORY.md atualizado** — arquitetura multi-fonte, roadmap revisado, decisões registradas
+- **AGENTS.md atualizado** — novos arquivos, convenções multi-source, endpoints MangaFire
+- **Build: ✅** compila sem erros
+
+**Decisões:**
+- MangaFire como primeiro fallback implementado (não MangaStop.net) — API wrapper existente, menor esforço
+- Source toggle em vez de merge automático — UX mais clara, evita conflitos de ID entre fontes
+- Image proxy separado em vez de middleware — mais simples, sem overhead em requests normais
+- Reader modificado (`absoluteUrls` prop) em vez de componente separado — mínimo impacto no código existente
+- MangaFire imagens SEM proxy no leitor por enquanto — URLs diretas do CDN podem funcionar sem Referer
+
+**Próximos passos:**
+- [ ] Implementar MangaStop.net scraper (WordPress MangaThemesia + Cloudflare)
+- [ ] Adicionar cache PostgreSQL para MangaFire (source prefix nas chaves)
+- [ ] LeituraManga.net scraper
+- [ ] Source indicator no MangaCard (badge mostrando qual fonte)
+- [ ] Testar MangaFire reader no ar (verificar se imagens carregam sem proxy)
+- [ ] Tratar erro de capítulo 404 no MangaFire (retornar EmptyState em vez de quebrar)
+
+**Blocadores:** Nenhum
+
+---
+
+## Sessão 11 — 2026-05-24 | Varredura Completa de Fontes BR
+
+**O que foi feito:**
+- **Varredura exaustiva de 17+ fontes BR** — testadas individualmente com webfetch
+- **Fonte BR primária descoberta: MangaStop.net** (WordPress + MangaThemesia, catálogo completo PT-BR, Cloudflare, Discord 9k+)
+- **Fonte BR secundária descoberta: LeituraManga.net** (HTML próprio, Telegram ativo, milhares de títulos)
+- **Fonte BR complementar descoberta: QueroLer.com** (HTML simples, busca por título)
+- **Confirmado mortas (14):** HQNow!, Tsuki Mangás, Yomu Mangás, SlimeRead, Ler Mangá, MangáNanquim, LuraToon, FlowerManga, ReMangas, MangaOnline.biz, YomuComics, MahouScan, MangaLivre.ru, MangaPark.io
+- **Comick.io confirmado morto** (shutdown setembro/2025, virou tracking site)
+- **Bato.to sob ameaça legal** (operador preso na China, site ainda funciona)
+- **MangaFire API wrapper encontrado** (shafat-96/mangafire no GitHub — Node.js + Express + TypeScript + cheerio)
+- **Engenharia reversa do MangaStop.net:** URL patterns documentados, tema MangaTheresia identificado (estrutura previsível)
+- **Engenharia reversa do MangaFire:** endpoints documentados (home, search, manga, chapters, chapter images, proxy-image)
+- **RESEARCH.md atualizado** — seção 9 adicionada com tabela completa de 17+ fontes
+
+**Decisões:**
+- **Nova ordem de fontes:**
+  1. MangaDex (já feito) ✅
+  2. **MangaStop.net** 🔥 (nova fonte BR primária — vivo, grande acervo, PT-BR)
+  3. MangaFire (API wrapper já existe no GitHub)
+  4. LeituraManga.net (alternativa BR)
+  5. QueroLer.com (complementar)
+  6. MangaPlus (oficial Shueisha)
+  7. MangaFox (catálogo EN)
+- Fontes BR mortas/comprometidas **removidas da lista de prioridades**
+- Estratégia revisada: sem fontes BR dedicadas no curto prazo — MangaStop.net + MangaFire como fallbacks reais
+
+---
+
 ## Sessão 10 — 2026-05-24 | Fix Reader: onError + eager loading + remotePatterns
 
 **O que foi feito:**

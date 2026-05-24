@@ -15,6 +15,7 @@ interface Props {
   prevChapterId?: string | null
   nextChapterId?: string | null
   scanlator?: string | null
+  absoluteUrls?: boolean
 }
 
 type ReadingMode = "single" | "long-strip"
@@ -28,6 +29,7 @@ export default function Reader({
   prevChapterId,
   nextChapterId,
   scanlator,
+  absoluteUrls = false,
 }: Props) {
   const [currentPage, setCurrentPage] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -40,6 +42,7 @@ export default function Reader({
   const suffix = useDataSaver ? "data-saver" : "data"
 
   function pageUrl(pageIdx: number) {
+    if (absoluteUrls) return pages[pageIdx]
     return `${baseUrl}/${suffix}/${hash}/${pages[pageIdx]}`
   }
 

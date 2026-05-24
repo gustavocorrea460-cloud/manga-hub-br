@@ -5,16 +5,20 @@ import { useState } from "react"
 
 interface Props {
   initialQuery?: string
+  source?: string
 }
 
-export default function SearchBar({ initialQuery = "" }: Props) {
+export default function SearchBar({ initialQuery = "", source }: Props) {
   const [query, setQuery] = useState(initialQuery)
   const router = useRouter()
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (query.trim()) {
-      router.push(`/busca?q=${encodeURIComponent(query.trim())}`)
+      const params = new URLSearchParams()
+      params.set("q", query.trim())
+      if (source) params.set("source", source)
+      router.push(`/busca?${params.toString()}`)
     }
   }
 
