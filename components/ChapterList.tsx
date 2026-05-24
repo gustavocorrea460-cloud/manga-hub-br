@@ -1,6 +1,6 @@
 import Link from "next/link"
 import type { Chapter } from "@/types/mangadex"
-import { formatRelativeTime, formatChapter } from "@/lib/utils"
+import { formatRelativeTime, formatChapter, leitorUrl } from "@/lib/utils"
 
 interface Props {
   chapters: Chapter[]
@@ -21,7 +21,7 @@ export default function ChapterList({ chapters, mangaId }: Props) {
       {chapters.map(chapter => (
         <Link
           key={chapter.id}
-          href={`/leitor/${chapter.id}?mangaId=${mangaId}`}
+          href={leitorUrl(chapter.id, mangaId)}
           className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-white/5 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">

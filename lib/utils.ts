@@ -26,3 +26,8 @@ export function formatChapter(num: string | null): string {
   if (num === null) return "—"
   return `Capítulo ${parseFloat(num)}`
 }
+
+export function leitorUrl(chapterId: string, mangaId?: string): string {
+  if (mangaId) return `/leitor/${chapterId}?mangaId=${mangaId}`
+  return `/leitor/${chapterId}`
+}

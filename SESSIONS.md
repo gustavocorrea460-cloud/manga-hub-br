@@ -11,6 +11,18 @@
 
 ---
 
+## Sessão 7 — 2026-05-24 | Fix: Migração de Cache de Páginas
+
+**O que foi feito:**
+- Diagnóstico: cache antigo de `chapter_cache` não tinha campo `hash` → leitor gerava URL com `undefined` → 404
+- `normalizeChapterPages()` criado para ler cache nos dois formatos (antigo: sem hash, novo: com hash) e com fallback `hash: ""` para o antigo
+- Cache antigo de páginas limpo do banco (`DELETE FROM chapter_cache WHERE id LIKE 'pages:%'`)
+- Deployado em https://manga-hub-br.vercel.app
+
+**Estado do build:** ✅ Compilando
+
+---
+
 ## Sessão 6 — 2026-05-24 | Fix: Migração de Cache
 
 **O que foi feito:**

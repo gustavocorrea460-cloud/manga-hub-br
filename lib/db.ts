@@ -77,7 +77,7 @@ export async function getMangaListCache(
   const sql = getSql()
   const rows = await sql`
     SELECT id, data, updated_at FROM manga_cache
-    WHERE id LIKE ${key} AND id NOT LIKE 'manga:%'
+    WHERE id = ${key} AND id NOT LIKE 'manga:%'
   `
   const arr = rows as Record<string, unknown>[]
   return arr.length > 0 ? {

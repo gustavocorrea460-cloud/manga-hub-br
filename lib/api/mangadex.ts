@@ -32,6 +32,7 @@ async function fetchMangaDex<T>(
       ...init?.headers,
     },
     next: { revalidate: 300 },
+    signal: AbortSignal.timeout(10000),
   })
 
   if (!res.ok) {
