@@ -10,6 +10,7 @@ import EmptyState from "@/components/EmptyState"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { searchMangaWithFilters } from "@/lib/api/mangadex"
 import { getTagsCached, searchMangaFireCached, searchMangaStopCached } from "@/lib/cache"
+import SourceBadge from "@/components/SourceBadge"
 import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/mangadex"
 
 const LIMIT = 30
@@ -169,6 +170,9 @@ async function MangaFireResults({ query, page }: { query: string; page: number }
                   Sem capa
                 </div>
               )}
+              <div className="absolute top-1.5 left-1.5">
+                <SourceBadge source="mangafire" size="xs" />
+              </div>
             </div>
             <div className="px-2 pb-2">
               <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
@@ -250,6 +254,9 @@ async function MangaStopResults({ query }: { query: string }) {
                   Sem capa
                 </div>
               )}
+              <div className="absolute top-1.5 left-1.5">
+                <SourceBadge source="mangastop" size="xs" />
+              </div>
             </div>
             <div className="px-2 pb-2">
               <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">

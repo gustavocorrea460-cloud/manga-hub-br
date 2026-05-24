@@ -9,6 +9,7 @@ import {
   getMangaStopPagesCached,
   getMangaStopChaptersCached,
 } from "@/lib/cache"
+import SourceBadge from "@/components/SourceBadge"
 import { getScanlatorName } from "@/types/mangadex"
 import { Suspense } from "react"
 import type { Chapter } from "@/types/mangadex"
@@ -219,6 +220,10 @@ export default async function ReaderPage({
 
   return (
     <div className="py-4">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold">Leitor</h1>
+        <SourceBadge source={source} />
+      </div>
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-16">

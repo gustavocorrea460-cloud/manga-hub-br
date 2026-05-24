@@ -14,6 +14,7 @@ import {
   getMangaStopChaptersCached,
 } from "@/lib/cache"
 import { getCoverUrl as getMangaFireCoverUrl } from "@/lib/api/mangafire"
+import SourceBadge from "@/components/SourceBadge"
 import {
   getTitle,
   getDescription,
@@ -118,9 +119,7 @@ async function MangaDetailMangaDex({ mangaId }: { mangaId: string }) {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Capítulos</h2>
-          <span className="text-[10px] text-muted bg-card px-2 py-0.5 rounded border border-border">
-            MangaDex
-          </span>
+          <SourceBadge source="mangadex" />
         </div>
         <Suspense fallback={<ChapterListSkeleton />}>
           <ChaptersSectionMangaDex mangaId={mangaId} />
@@ -231,9 +230,7 @@ async function MangaDetailMangaFire({ mangaId }: { mangaId: string }) {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Capítulos</h2>
-          <span className="text-[10px] text-muted bg-card px-2 py-0.5 rounded border border-border">
-            MangaFire
-          </span>
+          <SourceBadge source="mangafire" />
         </div>
         <Suspense fallback={<ChapterListSkeleton />}>
           <ChaptersSectionMangaFire mangaId={mangaId} />
@@ -362,9 +359,7 @@ async function MangaDetailMangaStop({ mangaId }: { mangaId: string }) {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Capítulos</h2>
-          <span className="text-[10px] text-muted bg-card px-2 py-0.5 rounded border border-border">
-            MangaStop
-          </span>
+          <SourceBadge source="mangastop" />
         </div>
         <Suspense fallback={<ChapterListSkeleton />}>
           <ChaptersSectionMangaStop mangaId={mangaId} />

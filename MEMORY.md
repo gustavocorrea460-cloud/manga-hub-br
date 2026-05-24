@@ -528,7 +528,7 @@ function slugify(title: string): string
 - [x] Image proxy /api/proxy (para imagens com proteção CORS/hotlink) ✅
 - [x] Source switch param (?source=mangadex|mangafire|mangastop) ✅
 - [x] **Integração MangaStop.net** (cheerio + WordPress mangareader theme) ✅
-- [ ] Source indicator UI (mostrar qual fonte serviu cada capítulo/dado)
+- [x] Source indicator UI (badges por fonte nos cards, detalhes e leitor) ✅
 - [x] Cache PostgreSQL multi-source: MangaFire + MangaStop (prefixos `mf:*`, `ms:*`) ✅
 - [ ] Integração LeituraManga.net
 - [ ] Integração QueroLer.com

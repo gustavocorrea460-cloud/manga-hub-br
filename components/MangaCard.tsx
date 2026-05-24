@@ -1,14 +1,17 @@
 import Link from "next/link"
 import Image from "next/image"
+import SourceBadge from "@/components/SourceBadge"
 import type { Manga } from "@/types/mangadex"
 import { getTitle, getCoverUrl, getStatusLabel } from "@/types/mangadex"
-import { formatRelativeTime, truncate } from "@/lib/utils"
+import { formatRelativeTime } from "@/lib/utils"
+import type { SourceId } from "@/components/SourceBadge"
 
 interface Props {
   manga: Manga
+  source?: SourceId
 }
 
-export default function MangaCard({ manga }: Props) {
+export default function MangaCard({ manga, source }: Props) {
   const title = getTitle(manga)
   const coverUrl = getCoverUrl(manga, "256")
   const slug = manga.id
@@ -30,6 +33,11 @@ export default function MangaCard({ manga }: Props) {
         ) : (
           <div className="flex items-center justify-center h-full text-muted text-sm p-4 text-center">
             Sem capa
+          </div>
+        )}
+        {source && (
+          <div className="absolute top-1.5 left-1.5">
+            <SourceBadge source={source} size="xs" />
           </div>
         )}
       </div>

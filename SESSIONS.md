@@ -11,6 +11,18 @@
 
 ---
 
+## Sessão 15 — 2026-05-24 | Source Indicator UI (badges por fonte)
+
+**O que foi feito:**
+- **Criado `components/SourceBadge.tsx`** — componente pill reutilizável com cores por fonte: MangaDex (cyan), MangaFire (orange), MangaStop (emerald); suporta `size="sm"` e `size="xs"`
+- **`MangaCard.tsx` atualizado** — prop opcional `source?: SourceId`, renderiza badge overlay no canto superior esquerdo da capa
+- **`app/busca/page.tsx`** — `MangaFireResults` e `MangaStopResults` agora têm badge overlay nas imagens dos cards
+- **`app/manga/[slug]/page.tsx`** — texto estático `"MangaDex"`/`"MangaFire"`/`"MangaStop"` substituído por `<SourceBadge>` ao lado do título "Capítulos"
+- **`app/leitor/[chapterId]/page.tsx`** — adicionado `<SourceBadge source={source}>` no topo do reader
+- **Build: ✅** compila sem erros (8 routes)
+
+---
+
 ## Sessão 14 — 2026-05-24 | Cache PostgreSQL multi-source (MangaFire + MangaStop)
 
 **O que foi feito:**
