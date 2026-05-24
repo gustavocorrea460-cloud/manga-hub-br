@@ -31,8 +31,10 @@ export default function Reader({
 }: Props) {
   const [currentPage, setCurrentPage] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [mode, setMode] = useState<ReadingMode>("single")
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [retryKey, setRetryKey] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const suffix = useDataSaver ? "data-saver" : "data"
@@ -45,6 +47,7 @@ export default function Reader({
     if (currentPage < pages.length - 1) {
       setCurrentPage(p => p + 1)
       setLoading(true)
+      setError(false)
     }
   }, [currentPage, pages.length])
 
@@ -52,6 +55,7 @@ export default function Reader({
     if (currentPage > 0) {
       setCurrentPage(p => p - 1)
       setLoading(true)
+      setError(false)
     }
   }, [currentPage])
 
@@ -174,18 +178,32 @@ export default function Reader({
 
       {mode === "single" ? (
         <div className="relative w-full min-h-[50vh]">
-          {loading && (
+          {loading && !error && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
           )}
+          {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-3">
+              <p className="text-sm text-muted">Erro ao carregar imagem</p>
+              <button
+                onClick={() => { setError(false); setLoading(true); setRetryKey(k => k + 1) }}
+                className="px-3 py-1.5 rounded bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
           <Image
+            key={`${currentPage}-${retryKey}`}
             src={pageUrl(currentPage)}
             alt={`Página ${currentPage + 1}`}
             width={800}
             height={1200}
             className={`w-full h-auto rounded-lg cursor-pointer select-none ${loading ? "opacity-0" : "opacity-100"} transition-opacity`}
-            onLoad={() => setLoading(false)}
+            onLoad={() => { setLoading(false); setError(false) }}
+            onError={() => { setLoading(false); setError(true) }}
+            loading="eager"
             unoptimized
             onClick={handleImageClick}
             draggable={false}

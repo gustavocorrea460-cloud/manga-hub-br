@@ -11,6 +11,81 @@
 
 ---
 
+## Sessão 10 — 2026-05-24 | Fix Reader: onError + eager loading + remotePatterns
+
+**O que foi feito:**
+- Adicionado `onError` handler no `<Image>` do leitor (Reader.tsx) — se imagem falha, mostra botão "Tentar novamente"
+- Adicionado `loading="eager"` na imagem em modo single (antes: `lazy` padrão do Next.js, atrasava carregamento)
+- Adicionado `key` dinâmico + `retryKey` no `<Image>` para permitir remontagem no retry
+- Adicionado `remotePatterns` para `**.mangadex.network` no `next.config.ts` (CDN real das imagens de capítulos)
+- Reset de `error` state em `goNext`/`goPrev`
+
+**Diagnóstico do bug de imagens não carregarem:**
+- Página do leitor renderiza corretamente (curl)
+- `src` da imagem aponta para CDN correta (`*.mangadex.network`)
+- Causas possíveis corrigidas:
+  1. `loading="lazy"` padrão do Next.js — alterado para `"eager"` no modo single
+  2. Falta de `onError` — imagem falhava silenciosamente, spinner infinito
+  3. `remotePatterns` sem `*.mangadex.network` — mesmo com `unoptimized`, adicionado como segurança
+
+**Estado do build:** ✅ Compilando
+
+**Próximos passos:**
+1. Verificar se imagens carregam no leitor em produção
+2. Multi-fontes (Comick) como fallback
+3. Domínio .com.br
+
+---
+
+## Sessão 9 — 2026-05-24 | Filtros Avançados na Busca
+
+**O que foi feito:**
+- **Filtros avançados na busca:** Sistema completo de filtros na página `/busca`
+- **Tipos extendidos:** `SearchFilters`, `FilterOrder`, `TagResponse`, helper functions (`getDemographicTags`, `getGenreTags`, `getThemeTags`, `getFormatTags` em `types/mangadex.ts`
+- **API:** `searchMangaWithFilters(filters)` — aceita status, year, includedTags, excludedTags, order; `getTags()` para buscar tags do MangaDex; cache de tags com TTL 6h em `lib/cache.ts`
+- **Componente `SearchFilters`:** Accordion collapsible mobile-first com seções: Status (multi-select pills), Ordenação (radio), Ano (input numérico), Demografia (tags), Gêneros (include/exclude toggle), Temas, Formatos. Cada tag tem 3 estados clicáveis: off → include (✓ roxo) → exclude (✗ tachado)
+- **URL state:** Todos os filtros via search params (`?q=&status=ongoing,completed&order=latestUpload&year=2020&includedTags=id1,id2&excludedTags=id3`), paginação preserva filtros
+- **Botão "Limpar filtros"** com indicador visual (bolinha roxa) quando filtros ativos
+
+**Arquivos criados/modificados:**
+- `types/mangadex.ts` — SearchFilters, FilterOrder, helpers de tag groups
+- `lib/api/mangadex.ts` — searchMangaWithFilters, getTags
+- `lib/cache.ts` — getTagsCached (TTL 6h)
+- `components/SearchFilters.tsx` — Componente de filtros completo (novo)
+- `app/busca/page.tsx` — Integração de filtros com server components + Suspense
+
+**Estado do build:** ✅ Compilando (Next.js 16 + TypeScript)
+
+**Próximos passos:**
+- Multi-fontes (Comick API como fallback)
+- Zoom e Pan no leitor
+- Domínio .com.br
+- PWA
+
+**Blocadores:** Nenhum
+
+---
+
+## Sessão 8 — 2026-05-24 | Modo Webtoon + Correções Críticas
+
+**O que foi feito:**
+- **Modo Webtoon (Long Strip):** Botão de toggle no leitor, scroll vertical com lazy loading (`loading="lazy"`), indicador de progresso em %, navegação para próximo capítulo ao chegar ao final
+- **Pré-carregamento:** `<link rel="prefetch">` para a próxima página no modo single
+- **Fix crítico:** `next.config.ts` — adicionado `remotePatterns` para `/data/**` e `/data-saver/**` (sem isso, imagens do leitor davam 404 em produção)
+- **Fix crítico:** `fetch` com timeout de 10s (`AbortSignal.timeout`)
+- **Fix:** `getMangaListCache` — trocado `LIKE` por `=` (era semanticamente incorreto)
+- **Melhoria:** `leitorUrl()` helper em utils.ts — centraliza construção de URLs do leitor
+- **Melhoria:** Reader refatorado — botões mais compactos, `leitorUrl()` usado em todos os links
+
+**Estado do build:** ✅ Compilando e deployado
+
+**Próximos passos:**
+- Zoom e pan no leitor
+- Filtros avançados na busca
+- Multi-fontes (Comick)
+
+---
+
 ## Sessão 7 — 2026-05-24 | Fix: Migração de Cache de Páginas
 
 **O que foi feito:**

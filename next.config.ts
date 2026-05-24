@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
         hostname: "uploads.mangadex.org",
         pathname: "/data-saver/**",
       },
+      {
+        protocol: "https",
+        hostname: "**.mangadex.network",
+      },
     ],
   },
 }
