@@ -106,6 +106,48 @@ export interface CoverResponse {
   }
 }
 
+export interface TagResponse {
+  result: "ok"
+  data: Tag[]
+}
+
+export type FilterOrder = "relevance" | "latestUpload" | "title" | "year"
+
+export interface SearchFilters {
+  q?: string
+  status?: string[]
+  order?: FilterOrder
+  year?: number
+  includedTags?: string[]
+  excludedTags?: string[]
+}
+
+export function extractTagIds(tags: Tag[], group: string): Tag[] {
+  return tags.filter(t => t.attributes.group === group)
+}
+
+export function getDemographicTags(tags: Tag[]): Tag[] {
+  return extractTagIds(tags, "genre").filter(t => {
+    const name = t.attributes.name.en || ""
+    return ["shounen", "shoujo", "seinen", "josei", "kodomo"].includes(name.toLowerCase())
+  })
+}
+
+export function getGenreTags(tags: Tag[]): Tag[] {
+  return extractTagIds(tags, "genre").filter(t => {
+    const name = t.attributes.name.en || ""
+    return !["shounen", "shoujo", "seinen", "josei", "kodomo"].includes(name.toLowerCase())
+  })
+}
+
+export function getThemeTags(tags: Tag[]): Tag[] {
+  return extractTagIds(tags, "theme")
+}
+
+export function getFormatTags(tags: Tag[]): Tag[] {
+  return extractTagIds(tags, "format")
+}
+
 export function getTitle(manga: Manga): string {
   return manga.attributes.title["pt-br"]
     || manga.attributes.title.en

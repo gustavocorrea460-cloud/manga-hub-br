@@ -6,6 +6,10 @@ import type {
   ChapterResponse,
   AtHomeResponse,
   CoverResponse,
+  Tag,
+  TagResponse,
+  SearchFilters,
+  FilterOrder,
 } from "@/types/mangadex"
 
 const BASE = "https://api.mangadex.org"
@@ -66,6 +70,59 @@ export async function searchManga(
 
   const data = await fetchMangaDex<MangaResponse>(`/manga?${params}`)
   return { data: data.data, total: data.total }
+}
+
+export async function searchMangaWithFilters(
+  filters: SearchFilters & { page?: number; limit?: number },
+): Promise<{ data: Manga[]; total: number }> {
+  const params = createMangaParams()
+  const page = filters.page || 1
+  const limit = filters.limit || 30
+
+  params.set("limit", String(limit))
+  params.set("offset", String((page - 1) * limit))
+
+  if (filters.q) {
+    params.set("title", filters.q)
+  }
+
+  if (filters.status && filters.status.length > 0) {
+    filters.status.forEach(s => params.append("status[]", s))
+  }
+
+  if (filters.year) {
+    params.set("year", String(filters.year))
+  }
+
+  if (filters.includedTags && filters.includedTags.length > 0) {
+    filters.includedTags.forEach(id => params.append("includedTags[]", id))
+    params.set("includedTagsMode", "AND")
+  }
+
+  if (filters.excludedTags && filters.excludedTags.length > 0) {
+    filters.excludedTags.forEach(id => params.append("excludedTags[]", id))
+  }
+
+  if (filters.order && filters.order !== "relevance") {
+    const orderMap: Record<FilterOrder, string> = {
+      relevance: "",
+      latestUpload: "updatedAt",
+      title: "title",
+      year: "year",
+    }
+    const field = orderMap[filters.order]
+    if (field) {
+      params.set(`order[${field}]`, field === "title" ? "asc" : "desc")
+    }
+  }
+
+  const data = await fetchMangaDex<MangaResponse>(`/manga?${params}`)
+  return { data: data.data, total: data.total }
+}
+
+export async function getTags(): Promise<Tag[]> {
+  const data = await fetchMangaDex<TagResponse>("/manga/tag")
+  return data.data
 }
 
 export async function getManga(id: string): Promise<Manga> {

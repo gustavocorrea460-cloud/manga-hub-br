@@ -11,8 +11,9 @@ import {
   getManga,
   getChapters,
   getChapterPages,
+  getTags as fetchTags,
 } from "@/lib/api/mangadex"
-import type { Manga, Chapter } from "@/types/mangadex"
+import type { Manga, Chapter, Tag } from "@/types/mangadex"
 
 const CACHE_TTL_MINUTES = 30
 
@@ -95,6 +96,34 @@ export async function getChaptersCached(
     }
     throw new Error("MangaDex API indisponível e nenhum cache encontrado")
   }
+}
+
+const TAGS_CACHE_KEY = "mangadex:tags"
+const TAGS_TTL_MINUTES = 360
+
+export async function getTagsCached(): Promise<Tag[]> {
+  const cached = await getCache(TAGS_CACHE_KEY)
+  if (cached && !isExpiredCustom(cached.updated_at as string, TAGS_TTL_MINUTES)) {
+    return cached.data as Tag[]
+  }
+
+  try {
+    const tags = await fetchTags()
+    await setCache(TAGS_CACHE_KEY, tags)
+    return tags
+  } catch {
+    if (cached) {
+      console.warn("API de tags falhou, servindo cache expirado")
+      return cached.data as Tag[]
+    }
+    return []
+  }
+}
+
+function isExpiredCustom(updatedAt: string, ttlMinutes: number): boolean {
+  const then = new Date(updatedAt).getTime()
+  const now = Date.now()
+  return now - then > ttlMinutes * 60 * 1000
 }
 
 function normalizeChapterPages(
