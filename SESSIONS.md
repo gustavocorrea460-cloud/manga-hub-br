@@ -11,6 +11,24 @@
 
 ---
 
+## Sessão 16 — 2026-05-24 | Dump do Catálogo MangaStop + manga_catalog
+
+**O que foi feito:**
+- **Criado `lib/api/sitemap.ts`** — `getAllMangaStopSlugs()` que parseia os 3 sitemaps XML do MangaStop.net e extrai todos os slugs (2456 mangás encontrados)
+- **Migration — tabela `manga_catalog`** — schema dedicado para preservação: `id (PK), source, slug, title, metadata JSONB, chapters JSONB, updated_at` com índices por source e title
+- **`lib/db.ts` atualizado** — `getSql()` exportado, `setCatalogEntry()` (UPSERT por slug+source), `getCatalogCount()`
+- **Criado `scripts/dump-mangastop.ts`** — script standalone executado via `npx tsx`:
+  - Garante schema automaticamente
+  - Obtém slugs dos sitemaps
+  - Para cada slug: chama `getMangoStopCached()` + `getMangaStopChaptersCached()` (ambas com cache no banco)
+  - Salva em `manga_catalog` com metadados e capítulos
+  - Rate limiting: 400ms entre requests (modo normal) / 150ms (`--quick`)
+  - Progresso a cada 50 mangás + resumo final
+- **Build: ✅** compila sem erros (8 routes)
+- **Dep:** `dotenv` instalado como devDependency
+
+---
+
 ## Sessão 15 — 2026-05-24 | Source Indicator UI (badges por fonte)
 
 **O que foi feito:**

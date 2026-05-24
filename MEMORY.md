@@ -530,6 +530,7 @@ function slugify(title: string): string
 - [x] **Integração MangaStop.net** (cheerio + WordPress mangareader theme) ✅
 - [x] Source indicator UI (badges por fonte nos cards, detalhes e leitor) ✅
 - [x] Cache PostgreSQL multi-source: MangaFire + MangaStop (prefixos `mf:*`, `ms:*`) ✅
+- [x] Dump do catálogo MangaStop (script + tabela manga_catalog, 2456 mangás) ✅
 - [ ] Integração LeituraManga.net
 - [ ] Integração QueroLer.com
 
