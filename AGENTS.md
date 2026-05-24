@@ -134,7 +134,8 @@ Antes de qualquer ação, verifique:
 │   ├── api/mangadex.ts             # Cliente MangaDex ({ data, total })
 │   ├── api/mangafire.ts            # Scraper MangaFire (cheerio + AJAX)
 │   ├── api/mangastop.ts            # Scraper MangaStop.net (cheerio + _ts_internal_config)
-│   ├── cache.ts                    # Cache layer (TTL 30min, fallback)
+│   ├── api/sitemap.ts              # Parser sitemaps XML (getAllMangaStopSlugs)
+│   ├── cache.ts                    # Cache layer (TTL 30min, fallback multi-source)
 │   ├── sources.ts                  # Unified adapter multi-source
 │   ├── db.ts                       # Neon SQL queries (lazy init)
 │   └── utils.ts                    # Helpers (date, format, cn)
@@ -197,7 +198,9 @@ npm run dev          # Dev server (http://localhost:3000)
 npm run build        # Build de produção
 npm run typecheck    # TypeScript check sem build
 npm run lint         # ESLint
-npm run db:migrate   # Rodar migrations no Neon (precisa DATABASE_URL)
+npm run db:migrate   # Rodar migrations no Neon (precisa .env.local)
+npm run db:dump      # Dump completo do catálogo MangaStop (2456 mangás, ~30min)
+npm run db:dump -- --quick  # Dump rápido (150ms rate limit, ~15min)
 npm run setup        # cp .env.example .env.local
 ```
 
