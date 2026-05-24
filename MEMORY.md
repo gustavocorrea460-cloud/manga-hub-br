@@ -3,7 +3,7 @@
 ## 📋 Ficha Técnica
 
 - **Projeto:** Manga Hub BR — agregador de mangás em português brasileiro
-- **Stack:** Next.js 14+ (App Router) + TypeScript + Tailwind CSS
+- **Stack:** Next.js 16 (App Router) + TypeScript + Tailwind CSS v4
 - **Database:** PostgreSQL (Neon — free tier)
 - **Hospedagem:** Vercel (gratuito)
 - **Autenticação:** NextAuth.js
@@ -422,16 +422,7 @@ function slugify(title: string): string
 
 ---
 
-> 📌 **Log de sessões detalhado em `SESSIONS.md`** (append-only, nunca editado)
-
-## 📝 Log de Sessões (resumo)
-
-| Data | Sessão | Resumo |
-|---|---|---|
-| 2026-05-24 | Sessão 1 — Planejamento | Análise ecossistema BR, 112 extensões Tachiyomi, arquitetura definida |
-| 2026-05-24 | Sessão 2 — MVP | Next.js 16 criado, MangaDex API, cache Neon, todas as páginas, build ✅ |
-| 2026-05-24 | Sessão 3 — Deploy | GitHub, Vercel, Neon, lazy db init, site ao vivo |
-| 2026-05-24 | Sessão 4 — Base Robusta | Infra (GitHub Secrets, cron route fix), paginação, leitor melhorado (teclado, navegação caps, Data Saver, scanlator), busca com query params |
+> 📌 **Log de sessões completo em `SESSIONS.md`** (append-only, nunca editado)
 
 ---
 

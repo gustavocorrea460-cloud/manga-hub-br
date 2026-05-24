@@ -11,6 +11,28 @@
 
 ---
 
+## Sessão 5 — 2026-05-24 | Reforço do Sistema de Memória
+
+**O que foi feito:**
+- **AGENTS.md reescrito:** "PRIMEIRA AÇÃO AO PERDER CONTEXTO" destacado no topo, estrutura de pastas atualizada, ficha rápida com features implementadas, `git status` adicionado ao boot checklist, convenções expandidas (retorno `{ data, total }`, `mangaId` como search param)
+- **MEMORY.md limpo:** stack corrigido para Next.js 16 (estava 14+), tabela de log de sessões removida (informação duplicada do `SESSIONS.md`)
+- **CLAUDE.md** já referencia `@AGENTS.md` — ok
+
+**Decisões:**
+- MEMORY.md não deve mais duplicar logs de sessão — fonte única é SESSIONS.md
+- AGENTS.md é o primeiro arquivo a ser lido ao perder contexto (antes de MEMORY.md), pois contém as instruções de boot + breaking changes
+
+**Estado do build:** ✅ Compilando
+
+**Próximos passos:**
+- Fase 2 — Modos de leitura (webtoon, página dupla, zoom/pan)
+- Fase 2 — Download de capítulos
+- Fase 3 — Multi-fontes (Comick, MangaFire)
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 4 — 2026-05-24 | Base Robusta (Fase 1.5)
 
 **O que foi feito:**
