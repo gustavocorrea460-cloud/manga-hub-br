@@ -11,6 +11,42 @@
 
 ---
 
+## Sessão 3 — 2026-05-24 | Deploy & Infra Completa
+
+**O que foi feito:**
+- Instalado `gh` CLI (GitHub) e `vercel` CLI
+- Configurado `.env.local` com DATABASE_URL real do Neon
+- Rodado `npm run db:migrate` — tabelas criadas no Neon
+- Criado repositório GitHub e feito push (`gustavocorrea460-cloud/manga-hub-br`)
+- Feito deploy no Vercel (URL: https://manga-hub-br.vercel.app)
+- Configurado env vars no Vercel: DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
+- Fix: lazy db init (`getSql()`) para build não quebrar sem DATABASE_URL
+
+**Estado do build:** ✅ Compilando e rodando em produção
+**URL:** https://manga-hub-br.vercel.app
+**Repo:** https://github.com/gustavocorrea460-cloud/manga-hub-br
+
+**Site funcionando:**
+- Home com grid de lançamentos recentes do MangaDex
+- Capas carregando do CDN da MangaDex
+- Labels em português (Completo, Em andamento, Hiato)
+- Datas relativas em português (há 5 horas, etc.)
+
+**Decisões:**
+- Fix `db.ts` com lazy init (`getSql()`) em vez de eager (`const sql = neon(...)`)
+- Tagged template Neon API (`sql`...``) em vez de `sql.query()` para compatibilidade de tipos
+
+**Próximos passos (Futuro):**
+- Configurar GitHub Secrets: CRON_SECRET, VERCEL_URL
+- Configurar domínio personalizado no registro.br
+- Adicionar fonte fallback Comick API (Fase 2)
+- Implementar autenticação (NextAuth)
+- Adicionar favoritos e histórico
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 2 — 2026-05-24 | Sistema Anti-Falha de Contexto
 
 **O que foi feito:**
