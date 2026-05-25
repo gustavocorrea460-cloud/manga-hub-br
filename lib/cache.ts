@@ -15,9 +15,11 @@ import {
 } from "@/lib/api/mangadex"
 import * as mangafire from "@/lib/api/mangafire"
 import * as mangastop from "@/lib/api/mangastop"
+import * as leiturmanga from "@/lib/api/leiturmanga"
 import type { Manga, Chapter, Tag } from "@/types/mangadex"
 import type { MangaFireSearchResponse, MangaFireManga, MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopSearchResult, MangaStopManga, MangaStopChapter } from "@/types/mangastop"
+import type { LeituraMangaSearchResult, LeituraMangaManga, LeituraMangaChapter } from "@/types/leiturmanga"
 
 const CACHE_TTL_MINUTES = 30
 
@@ -246,6 +248,50 @@ export async function getMangaStopPagesCached(
     `ms:pages:${encodeURIComponent(chapterUrlPath)}`,
     `ms:${chapterUrlPath}`,
     () => mangastop.getChapterImages(chapterUrlPath),
+  )
+}
+
+// ─── LeituraManga Cached ─────────────────────────────────────
+
+export async function searchLeituraMangaCached(
+  query: string,
+): Promise<LeituraMangaSearchResult[]> {
+  return withMangaCache(
+    `llm:search:${query.toLowerCase().trim()}`,
+    () => leiturmanga.searchManga(query),
+  )
+}
+
+export async function getLeituraMangaCached(
+  slug: string,
+): Promise<LeituraMangaManga> {
+  return withMangaCache(
+    `llm:manga:${slug}`,
+    () => leiturmanga.getManga(slug),
+  )
+}
+
+export async function getLeituraMangaChaptersCached(
+  slug: string,
+): Promise<LeituraMangaChapter[]> {
+  return withChapterCache(
+    `llm:chapters:${slug}`,
+    `llm:${slug}`,
+    () => leiturmanga.getChapters(slug),
+  )
+}
+
+export async function getLeituraMangaPagesCached(
+  chapterId: string,
+): Promise<string[]> {
+  const [slug, num] = chapterId.split(":")
+  if (!slug || !num) {
+    throw new Error(`Invalid LeituraManga chapterId: ${chapterId}`)
+  }
+  return withChapterCache(
+    `llm:pages:${slug}:${num}`,
+    `llm:${slug}`,
+    () => leiturmanga.getChapterImages(slug, num),
   )
 }
 

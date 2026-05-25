@@ -11,6 +11,44 @@
 
 ---
 
+## Sessão 17 — 2026-05-24 | LeituraManga.net Scraper + Catálogo + 4-fontes
+
+**O que foi feito:**
+- **Investigação aprofundada do LeituraManga.net:** confirmado que NÃO é WordPress/Madara — é Next.js (RSC) com imagens SSR no `<img>` diretamente. CDN real `cdn.leituramanga.net`. Capítulos têm imagens em `<img>` tags no HTML (server-rendered, sem necessidade de API). Busca `/?s=` não funciona. Capítulos carregados client-side via React Query.
+- **Tipos criados** (`types/leiturmanga.ts`) — `LeituraMangaSearchResult`, `LeituraMangaManga`, `LeituraMangaChapter`, helpers `extractSlug()`, `extractChapterNumber()`
+- **Scraper criado** (`lib/api/leiturmanga.ts`):
+  - `searchManga()` → retorna vazio (busca nativa não funciona)
+  - `getManga(slug)` → parse `/manga/{slug}/` — título, capa (CDN), status, autor, gêneros, descrição, firstChapter/lastChapter via "Ler Primeiro/Último Capítulo"
+  - `getChapters(slug)` → deriva range de capítulos a partir do first/last chapter (limite 500)
+  - `getChapterImages(slug, chapterNumber)` → parse `/manga/{slug}/chapter/{num}/` — extrai `<img>` do CDN, deduplica por page number, ordena
+- **Cache layer** (`lib/cache.ts`) — `llm:*` prefix: `searchLeituraMangaCached`, `getLeituraMangaCached`, `getLeituraMangaChaptersCached`, `getLeituraMangaPagesCached`
+- **Unified adapter** (`lib/sources.ts`) — `SourceId` estendido para `"leiturmanga"`, todas as dispatch functions (search/getManga/getChapters/getChapterPages) com suporte
+- **SourceBadge** (`components/SourceBadge.tsx`) — pink/rosa para LeituraManga (`bg-pink-500/15 text-pink-400 border-pink-500/30`)
+- **Busca 4-way** (`app/busca/page.tsx`) — MangaDex ↔ MangaFire ↔ MangaStop ↔ LeituraManga
+- **Detail page** (`app/manga/[slug]/page.tsx`) — `MangaDetailLeituraManga` + `ChaptersSectionLeituraManga` com chapterId format `{slug}:{number}`
+- **Reader** (`app/leitor/[chapterId]/page.tsx`) — `LeituraMangaReader` + `getPrevNextLeituraManga()`, images diretas do CDN (absoluteUrls)
+- **Catálogo** (`app/catalogo/page.tsx`) — nova página consultando `manga_catalog` com grid, paginação, filtro por fonte (source toggle), fallbacks para fontes sem dump
+- **Sitemap** (`lib/api/sitemap.ts`) — `getAllLeituraMangaSlugs()` parseia `manga-sitemap.xml` do LeituraManga.net
+- **Script de dump** (`scripts/dump-leiturmanga.ts`) — análogo ao dump-mangastop.ts, npm script `db:dump:leiturmanga`
+- **Navbar** (`components/Navbar.tsx`) — link "Catálogo" adicionado
+- **db.ts** — `getCatalogEntries(source, page, limit)` para paginação do catálogo
+- **Build: ✅** compila sem erros (9 routes)
+
+**Decisões:**
+- Chapter list derivada de first/last chapter em vez de API (client-side React Query sem endpoint exposto)
+- ChapterId format `{slug}:{number}` (separado por ":") para compatibilidade com cache e navegação
+- Imagens extraídas diretamente dos `<img>` tags SSR (sem API necessária)
+- Sem suporte a busca no LeituraManga (busca nativa não funciona)
+
+**Próximos passos:**
+- [ ] Rodar `npm run db:dump:leiturmanga` para popular catálogo
+- [ ] QueroLer.com scraper (fonte BR complementar)
+- [ ] Testar LeituraManga reader em produção
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 16 — 2026-05-24 | Dump do Catálogo MangaStop + manga_catalog
 
 **O que foi feito:**

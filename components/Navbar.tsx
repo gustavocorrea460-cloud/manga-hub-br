@@ -36,10 +36,16 @@ export default function Navbar() {
         </form>
 
         <Link
+          href="/catalogo"
+          className="text-sm text-muted hover:text-foreground transition-colors shrink-0"
+        >
+          Catálogo
+        </Link>
+        <Link
           href="/busca"
           className="text-sm text-muted hover:text-foreground transition-colors shrink-0"
         >
-          Busca avançada
+          Busca
         </Link>
       </div>
     </nav>

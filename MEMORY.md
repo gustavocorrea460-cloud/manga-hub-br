@@ -136,9 +136,14 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Páginas:** Fetch da página do capítulo → regex `_ts_internal_config` → `atob(token)` → URLs do `comick.jeffersondev.xyz` (origin CDN sem proteção)
 - **Proxy de imagens:** Desnecessário — origin CDN não tem hotlink protection, URLs decodificadas vão direto pro `<img>`
 
-### Fallback BR secundário: LeituraManga.net (fase 3)
-- **Site:** https://leituramanga.net — HTML próprio, design simples
-- **Abordagem:** Scraping TS + cheerio (HTML sem frameworks)
+### Fallback BR secundário: LeituraManga.net (fase 2.5) ✅ IMPLEMENTADO
+- **Site:** https://leituramanga.net — Next.js com RSC + API client-side
+- **Abordagem:** Scraping TS + cheerio (Next.js SSR, imagens em `<img>` tags)
+- **CDN:** `https://cdn.leituramanga.net/{slug}/{uuid}/page-{random}-{number}.webp`
+- **Capítulos:** Deriva range de first/last chapter (client-side React Query, sem API exposta)
+- **Páginas:** Extrai `<img>` tags diretas do CDN no HTML SSR (sem hotlink protection)
+- **Busca:** `/?s=` não funciona (retorna homepage)
+- **Sitemap:** `/manga-sitemap.xml` com sitemaps individuais
 - **Telegram:** ativo com notificações de novos capítulos
 - **Acervo:** milhares de títulos PT-BR
 
@@ -258,6 +263,8 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   │       └── loading.tsx
 │   ├── busca/
 │   │   └── page.tsx                # Página de busca com paginação
+│   ├── catalogo/
+│   │   └── page.tsx                # Catálogo de mangás (manga_catalog)
 │   └── api/
 │       ├── auth/
 │       │   └── [...nextauth]/
@@ -271,7 +278,9 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   ├── api/
 │   │   ├── mangadex.ts            # Cliente MangaDex API (retorna {data, total})
 │   │   ├── mangafire.ts           # Scraper MangaFire (cheerio, AJAX, proxy)
-│   │   └── mangastop.ts           # Scraper MangaStop.net (cheerio, _ts_internal_config)
+│   │   ├── mangastop.ts           # Scraper MangaStop.net (cheerio, _ts_internal_config)
+│   │   ├── leiturmanga.ts         # Scraper LeituraManga.net (cheerio, Next.js SSR)
+│   │   └── sitemap.ts             # Parser de sitemaps XML (MangaStop + LeituraManga)
 │   ├── cache.ts                   # Cache layer (banco, TTL 30min)
 │   ├── db.ts                      # Conexão com banco (lazy init)
 │   ├── sources.ts                 # Unified adapter multi-source
@@ -289,7 +298,8 @@ CREATE TABLE IF NOT EXISTS reading_history (
 ├── types/
 │   ├── mangadex.ts               # Tipos TypeScript da API + helpers
 │   ├── mangafire.ts              # Tipos MangaFire scraper + helpers
-│   └── mangastop.ts              # Tipos MangaStop scraper + helpers
+│   ├── mangastop.ts              # Tipos MangaStop scraper + helpers
+│   └── leiturmanga.ts            # Tipos LeituraManga scraper + helpers
 ├── db/
 │   └── migrate.ts                 # Script de migração
 ├── .env.local                     # Variáveis de ambiente (local)
@@ -348,7 +358,7 @@ CREATE TABLE IF NOT EXISTS reading_history (
 1. **MangaDex API** — primária, já implementada ✅
 2. **MangaFire** — fallback principal (gringo com PT-BR via scraping) ✅
 3. **MangaStop.net** — fallback BR primário (WordPress mangareader, Cloudflare) ✅
-4. **LeituraManga.net** — fallback BR secundário (pendente)
+4. **LeituraManga.net** — fallback BR secundário (Next.js, RSC) ✅
 5. **QueroLer.com** — fallback BR complementar (pendente)
 6. **MangaPlus** — oficial Shueisha (capítulos recentes PT-BR)
 7. **MangaFox** — fallback EN apenas
@@ -531,7 +541,7 @@ function slugify(title: string): string
 - [x] Source indicator UI (badges por fonte nos cards, detalhes e leitor) ✅
 - [x] Cache PostgreSQL multi-source: MangaFire + MangaStop (prefixos `mf:*`, `ms:*`) ✅
 - [x] Dump do catálogo MangaStop (script + tabela manga_catalog, 2456 mangás) ✅
-- [ ] Integração LeituraManga.net
+- [x] Integração LeituraManga.net ✅
 - [ ] Integração QueroLer.com
 
 ### Fase 3 — Usuários + Gringos

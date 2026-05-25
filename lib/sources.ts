@@ -9,13 +9,18 @@ import {
   getMangaStopCached,
   getMangaStopChaptersCached,
   getMangaStopPagesCached,
+  searchLeituraMangaCached,
+  getLeituraMangaCached,
+  getLeituraMangaChaptersCached,
+  getLeituraMangaPagesCached,
 } from "@/lib/cache"
 import * as mangafire from "@/lib/api/mangafire"
 import type { Manga } from "@/types/mangadex"
 import type { MangaFireSearchResult, MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopSearchResult, MangaStopChapter } from "@/types/mangastop"
+import type { LeituraMangaSearchResult, LeituraMangaChapter } from "@/types/leiturmanga"
 
-export type SourceId = "mangadex" | "mangafire" | "mangastop"
+export type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
 
 export interface UnifiedSearchResult {
   id: string
@@ -67,6 +72,14 @@ async function searchMangaStop(
   return { data, total: data.length }
 }
 
+async function searchLeituraManga(
+  query: string,
+  _page: number,
+): Promise<{ data: UnifiedSearchResult[]; total: number }> {
+  const results = await searchLeituraMangaCached(query)
+  return { data: [], total: 0 }
+}
+
 async function searchMangaDex(
   query: string,
   page: number,
@@ -103,6 +116,7 @@ export async function searchSource(
 ): Promise<{ data: UnifiedSearchResult[]; total: number }> {
   if (source === "mangafire") return searchMangaFire(query, page)
   if (source === "mangastop") return searchMangaStop(query, page)
+  if (source === "leiturmanga") return searchLeituraManga(query, page)
   return searchMangaDex(query, page)
 }
 
@@ -133,6 +147,21 @@ async function getMangaMangaStop(id: string): Promise<UnifiedManga> {
     year: m.year,
     genres: m.genres,
     source: "mangastop",
+  }
+}
+
+async function getMangaLeituraManga(id: string): Promise<UnifiedManga> {
+  const m = await getLeituraMangaCached(id)
+  return {
+    id,
+    title: m.title || "Sem título",
+    description: m.description || "",
+    coverUrl: m.coverUrl,
+    status: m.status || "",
+    author: m.author,
+    year: m.year,
+    genres: m.genres,
+    source: "leiturmanga",
   }
 }
 
@@ -176,6 +205,7 @@ export async function getMangaSource(
 ): Promise<UnifiedManga> {
   if (source === "mangafire") return getMangaMangaFire(id)
   if (source === "mangastop") return getMangaMangaStop(id)
+  if (source === "leiturmanga") return getMangaLeituraManga(id)
   return getMangaMangaDex(id)
 }
 
@@ -201,6 +231,15 @@ export async function getChaptersSource(
       date: c.date,
     }))
   }
+  if (source === "leiturmanga") {
+    const chapters = await getLeituraMangaChaptersCached(mangaId)
+    return chapters.map((c: LeituraMangaChapter) => ({
+      number: c.number,
+      id: `${mangaId}:${c.number}`,
+      title: c.title,
+      date: c.date,
+    }))
+  }
   const chapters = await getChapters(mangaId)
   return chapters.map(c => ({
     number: c.attributes.chapter || "0",
@@ -222,6 +261,10 @@ export async function getChapterPagesSource(
     const images = await getMangaStopPagesCached(chapterId)
     return { pages: images, baseUrl: null }
   }
+  if (source === "leiturmanga") {
+    const images = await getLeituraMangaPagesCached(chapterId)
+    return { pages: images, baseUrl: null }
+  }
   const data = await getChapterPagesCached(chapterId)
   return { pages: data.dataSaver, baseUrl: data.baseUrl }
 }
@@ -231,6 +274,7 @@ export function getSourceLabel(source: SourceId): string {
     mangadex: "MangaDex",
     mangafire: "MangaFire",
     mangastop: "MangaStop",
+    leiturmanga: "LeituraManga",
   }
   return labels[source] || source
 }

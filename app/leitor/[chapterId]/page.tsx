@@ -15,8 +15,13 @@ import { Suspense } from "react"
 import type { Chapter } from "@/types/mangadex"
 import type { MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopChapter } from "@/types/mangastop"
+import type { LeituraMangaChapter } from "@/types/leiturmanga"
+import {
+  getLeituraMangaPagesCached,
+  getLeituraMangaChaptersCached,
+} from "@/lib/cache"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
 
 async function getPrevNextMangaDex(
   chapters: Chapter[],
@@ -47,6 +52,23 @@ async function getPrevNextMangaFire(
   return {
     prevId: idx < sorted.length - 1 ? sorted[idx + 1].chapterId : null,
     nextId: idx > 0 ? sorted[idx - 1].chapterId : null,
+  }
+}
+
+async function getPrevNextLeituraManga(
+  chapters: LeituraMangaChapter[],
+  currentId: string,
+): Promise<{ prevId: string | null; nextId: string | null }> {
+  const currentNum = currentId.split(":")[1]
+  const sorted = [...chapters].sort((a, b) => {
+    const an = parseFloat(a.number || "0")
+    const bn = parseFloat(b.number || "0")
+    return bn - an
+  })
+  const idx = sorted.findIndex(c => c.number === currentNum)
+  return {
+    prevId: idx < sorted.length - 1 ? `${currentId.split(":")[0]}:${sorted[idx + 1].number}` : null,
+    nextId: idx > 0 ? `${currentId.split(":")[0]}:${sorted[idx - 1].number}` : null,
   }
 }
 
@@ -81,6 +103,10 @@ async function ReaderContent({
 
   if (source === "mangastop") {
     return <MangaStopReader chapterId={chapterId} mangaId={mangaId} />
+  }
+
+  if (source === "leiturmanga") {
+    return <LeituraMangaReader chapterId={chapterId} mangaId={mangaId} />
   }
 
   let pagesData
@@ -165,6 +191,46 @@ async function MangaStopReader({
   )
 }
 
+async function LeituraMangaReader({
+  chapterId,
+  mangaId,
+}: {
+  chapterId: string
+  mangaId?: string
+}) {
+  let images: string[]
+  try {
+    images = await getLeituraMangaPagesCached(chapterId)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no LeituraManga." />
+  }
+
+  let prevNext = { prevId: null as string | null, nextId: null as string | null }
+
+  if (mangaId) {
+    try {
+      const chapters = await getLeituraMangaChaptersCached(mangaId)
+      prevNext = await getPrevNextLeituraManga(chapters, chapterId)
+    } catch {
+      // non-critical
+    }
+  }
+
+  return (
+    <Reader
+      pages={images}
+      baseUrl=""
+      hash=""
+      chapterId={chapterId}
+      mangaId={mangaId || ""}
+      useDataSaver={false}
+      prevChapterId={prevNext.prevId}
+      nextChapterId={prevNext.nextId}
+      absoluteUrls
+    />
+  )
+}
+
 async function MangaFireReader({
   chapterId,
   mangaId,
@@ -213,7 +279,7 @@ export default async function ReaderPage({
   searchParams: Promise<{ mangaId?: string; source?: string }>
 }) {
   const [{ chapterId }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : "mangadex"
+  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : "mangadex"
   const { mangaId } = sp
 
   if (!chapterId) notFound()

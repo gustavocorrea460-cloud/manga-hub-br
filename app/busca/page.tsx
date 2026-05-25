@@ -15,7 +15,7 @@ import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/ma
 
 const LIMIT = 30
 
-type SourceId = "mangadex" | "mangafire" | "mangastop"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
 
 function parseFilters(
   params: Awaited<SearchParamsType>,
@@ -38,7 +38,7 @@ function parseFilters(
     includedTags: includedTags && includedTags.length > 0 ? includedTags : undefined,
     excludedTags: excludedTags && excludedTags.length > 0 ? excludedTags : undefined,
     page: Math.max(1, Number(params.page) || 1),
-    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : "mangadex",
+    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : "mangadex",
   }
 }
 
@@ -62,6 +62,10 @@ async function SearchResults({ filters }: { filters: ReturnType<typeof parseFilt
 
   if (source === "mangastop") {
     return <MangaStopResults query={filters.q || ""} />
+  }
+
+  if (source === "leiturmanga") {
+    return <MangaFireResults query={filters.q || ""} page={filters.page} />
   }
 
   let result
@@ -282,7 +286,7 @@ export default async function BuscaPage({
 }) {
   const params = await searchParams
   const filters = parseFilters(params)
-  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : "mangadex"
+  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : "mangadex"
 
   return (
     <div className="space-y-6">
@@ -344,6 +348,16 @@ function SourceToggle({ current, query }: { current: string; query?: string }) {
         }`}
       >
         MangaStop
+      </Link>
+      <Link
+        href={`${baseUrl}&source=leiturmanga`}
+        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+          current === "leiturmanga"
+            ? "bg-accent text-white"
+            : "bg-card border border-border text-muted hover:text-foreground"
+        }`}
+      >
+        LeituraManga
       </Link>
     </div>
   )

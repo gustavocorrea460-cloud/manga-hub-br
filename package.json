@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "npx tsx --env-file=.env.local db/migrate.ts",
     "db:dump": "npx tsx --env-file=.env.local scripts/dump-mangastop.ts",
+    "db:dump:leiturmanga": "npx tsx --env-file=.env.local scripts/dump-leiturmanga.ts",
     "setup": "cp -n .env.example .env.local && echo '.env.local criado. Edite com suas credenciais.'"
   },
   "dependencies": {

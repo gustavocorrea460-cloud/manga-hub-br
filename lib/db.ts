@@ -139,6 +139,37 @@ export async function setMangaListCache(
   `
 }
 
+export interface CatalogEntryRow {
+  id: string
+  source: string
+  slug: string
+  title: string
+  metadata: Record<string, unknown>
+  chapters: Record<string, unknown>[]
+  updated_at: string
+}
+
+export async function getCatalogEntries(
+  source: string,
+  page: number = 1,
+  limit: number = 30,
+): Promise<{ entries: CatalogEntryRow[]; total: number }> {
+  const sql = getSql()
+  const offset = (page - 1) * limit
+  const rows = await sql`
+    SELECT * FROM manga_catalog
+    WHERE source = ${source}
+    ORDER BY title ASC
+    LIMIT ${limit} OFFSET ${offset}
+  `
+  const countRows = await sql`SELECT COUNT(*) as count FROM manga_catalog WHERE source = ${source}`
+  const total = Number((countRows as Record<string, unknown>[])[0]?.count || 0)
+  return {
+    entries: rows as unknown as CatalogEntryRow[],
+    total,
+  }
+}
+
 export async function deleteExpiredCache(hours: number = 24): Promise<void> {
   const sql = getSql()
   await sql`DELETE FROM manga_cache WHERE updated_at < NOW() - INTERVAL '1 hour' * ${hours}`
