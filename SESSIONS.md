@@ -11,6 +11,36 @@
 
 ---
 
+## Sessão 20 — 2026-05-31 | Fase 1 — Separação de responsabilidades AGENTS.md / MEMORY.md
+
+**O que foi feito:**
+- **AGENTS.md virou 100% protocolo** — removidos: ficha rápida, features implementadas, árvore de diretórios, documentação detalhada de fontes (scraper endpoints, CDN, rate limits)
+- **AGENTS.md reduzido de 217 → 117 linhas** (−46%) — só boot, breaking changes, convenções de código, comandos, referências
+- **MEMORY.md ganhou**:
+  - Seção **Status Atual** no topo (fase, build, últimas features)
+  - Ficha técnica em formato de tabela (consolidada com a que estava no AGENTS.md)
+  - Componentes faltantes adicionados à árvore: `SourceBadge`, `SearchFilters`
+  - Diretório `scripts/` e arquivos raiz adicionados: `next.config.ts`, `package.json`, `RESEARCH.md`, etc.
+  - Node.js mínimo corrigido de 18+ para **20.12+**
+  - `RESEARCH.md` e `README.md` adicionados às referências
+- **Comandos do AGENTS.md atualizados** — adicionado `db:dump:leiturmanga`
+
+**Decisões:**
+- AGENTS.md deve conter APENAS: boot, breaking changes, convenções de código, comandos, referências
+- MEMORY.md é a fonte única de verdade para: arquitetura, fontes, schema, roadmap, features, decisões, setup, estrutura de pastas
+- Cada arquivo tem um propósito bem definido; nenhum duplica o outro
+
+**Estado do build:** ✅ Compilando (8 routes)
+**Commit:** `8a72412`
+
+**Próximos passos:**
+- [ ] Fase 2 — Preencher lacunas (propagar decisões do SESSIONS.md para MEMORY.md)
+- [ ] Fase 3 — TIMELINE.md, discoveries/
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 19 — 2026-05-31 | Fase 0 — Correção de fatos errados na documentação
 
 **O que foi feito:**
