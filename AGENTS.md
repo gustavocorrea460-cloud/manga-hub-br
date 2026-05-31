@@ -9,24 +9,12 @@
 Sempre que iniciar uma sessão nova (sem histórico), execute nesta ordem:
 
 ```markdown
-1. LEIA `AGENTS.md`   ← este arquivo (boot + breaking changes + convenções)
+1. LEIA `AGENTS.md`   ← este arquivo (boot, breaking changes, convenções)
 2. LEIA `MEMORY.md`   ← arquitetura, schema, decisões, roadmap
 3. LEIA `SESSIONS.md` ← últimas ações, próximo passo, blockers
-4. EXECUTE `git status`         ← saber estado do working tree
-5. EXECUTE `npm run build`      ← verificar se compila
-```
-
-## 1. Protocolo de Retomada de Contexto
-
-Se esta é uma nova sessão e você PRECISA RECUPERAR CONTEXTO:
-
-```markdown
-1. LEIA `AGENTS.md` — boot, breaking changes, ficha rápida, convenções
-2. LEIA `MEMORY.md` — arquitetura completa, schema, roadmap
-3. LEIA `SESSIONS.md` — últimas ações, próximo passo, blockers
-4. LEIA `.env.example` — variáveis necessárias
-5. EXECUTE `git status` — verificar working tree
-6. EXECUTE `npm run build` — verificar se compila
+4. LEIA `.env.example` ← variáveis de ambiente necessárias
+5. EXECUTE `git status`         ← saber estado do working tree
+6. EXECUTE `npm run build`      ← verificar se compila
 ```
 
 ## 2. Auto-Sumário Obrigatório
@@ -86,9 +74,9 @@ Antes de qualquer ação, verifique:
 | DB | Neon PostgreSQL (serverless, free) |
 | Deploy | Vercel (free) — https://manga-hub-br.vercel.app |
 | Auth | NextAuth.js v5 (estrutura, sem providers ainda) |
-| Fontes | MangaDex API (primária) + MangaFire scraper (fallback) + MangaStop.net (fallback BR) |
 | Cache | Tabelas PostgreSQL (TTL 30min) com fallback expirado |
 | Cron | GitHub Actions (30min) — CRON_SECRET + VERCEL_URL configurados |
+| Fontes | MangaDex API (primária) + MangaFire scraper + MangaStop.net (BR) + LeituraManga.net (BR) + QueroLer.com (BR, search-only) |
 | Repo | https://github.com/gustavocorrea460-cloud/manga-hub-br |
 | Plan Mode | `/plan` para planejar, sem edições |
 
@@ -100,9 +88,10 @@ Antes de qualquer ação, verifique:
 - Cache PostgreSQL com fallback se API cair
 - Tema escuro (#0f0f0f + accent roxo #6c5ce7)
 - Cron de atualização automática (GitHub Actions a cada 30min)
-- **Multi-source**: `?source=mangafire|mangastop` na busca, detalhes e leitor
+- **Multi-source**: `?source=mangafire|mangastop|leiturmanga|queroler` na busca, detalhes e leitor
 - **Image proxy**: `/api/proxy?url=` para bypass de CORS/hotlink
-- **Source toggle** na página de busca (MangaDex ↔ MangaFire ↔ MangaStop)
+- **Source toggle** na página de busca (MangaDex ↔ MangaFire ↔ MangaStop ↔ LeituraManga ↔ QueroLer)
+- **Fallback chain** automática entre fontes (reader + detail page)
 
 ## 📁 Estrutura
 
@@ -187,7 +176,22 @@ import { useState } from "react"
 //   chapters: parse from #chapterlist / ul.clstyle
 //   pages: fetch chapter page, extract _ts_internal_config, atob(token)
 //   origin CDN: comick.jeffersondev.xyz (no hotlink — URLs diretas no <img>)
-// SOURCE TOGGLE: componente SourceToggle disponível em /busca (3 fontes)
+// LEITURA MANGA: scraper via cheerio (Next.js SSR)
+//   search: /?s={query} (NÃO FUNCIONA — retorna vazio)
+//   detail: /manga/{slug}/ — parse SSR (título, capa CDN, status, autor, gêneros)
+//   chapters: range derivado de first/last chapter (limite 500)
+//   pages: extrai <img> do CDN em /manga/{slug}/chapter/{num}/
+//   CDN: cdn.leituramanga.net (sem hotlink)
+// QUEROLER: scraper via cheerio (Next.js SSR, PDF-only)
+//   search: /manga/?query={term} (SSR, parse manga-card)
+//   detail: /manga/{uuid}/ — parse SSR (h1.font-serif, manga-detail-*)
+//   chapters: tabela HTML #chapters-body + API paginada /manga/{uuid}/capitulos/?page=N
+//   pages: ❌ NÃO TEM (PDF-only, sem reader online)
+//   covers: /manga/cover/?id={uuid}&f={filename}.{ext}.256.jpg
+//   rate limit: 800ms entre requests
+//   adblock: detection + retry 1x
+// SOURCE TOGGLE: componente SourceToggle disponível em /busca (5 fontes)
+// FALLBACK CHAIN: lib/source-fallback.ts — searchAllSources, deduplicateResults, findAlternativesForReader
 // IMAGE PROXY: /api/proxy?url= para CORS/hotlink bypass (mangafire.to)
 ```
 

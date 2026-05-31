@@ -39,12 +39,17 @@
       │ API (primária)  │ │ (scraper, fallback│
       └─────────────────┘ │  principal)       │
                           └───────────────────┘
-      ┌────────▼────────┐ ┌──────────▼────────┐
-      │ MangaStop.net   │ │ LeituraManga.net  │
-      │ (scraper BR,    │ │ (scraper BR,     │
-      │  fase 2.5)      │ │  fase 3)         │
-      └─────────────────┘ └───────────────────┘
-                           Fase 2.5-3
+       ┌────────▼────────┐ ┌──────────▼────────┐
+       │ MangaStop.net   │ │ LeituraManga.net  │
+       │ (scraper BR,    │ │ (scraper BR,     │
+       │  fase 2.5)      │ │  fase 3)         │
+       └─────────────────┘ └───────────────────┘
+       ┌────────▼────────┐
+       │ QueroLer.com    │
+       │ (scraper BR,    │
+       │  search-only)   │
+       └─────────────────┘
+                            Fase 2.5-3
 ```
 
 ### Fluxo de Request
@@ -53,7 +58,7 @@
 2. Next.js SSR/SSG tenta buscar do cache PostgreSQL
 3. Se cache válido (< 30 min), retorna direto
 4. Se cache expirado, busca da MangaDex API, atualiza cache, retorna
-5. Se MangaDex falhar, tenta Comick (fase 2)
+5. Se MangaDex falhar, tenta fallback chain (MangaFire → MangaStop → LeituraManga → QueroLer)
 6. Se cache existir (mesmo expirado), serve como fallback
 
 ### Pipeline de Atualização
@@ -147,10 +152,19 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Telegram:** ativo com notificações de novos capítulos
 - **Acervo:** milhares de títulos PT-BR
 
-### Fallback BR complementar: QueroLer.com (fase 3)
-- **Site:** https://queroler.com — HTML simples, busca por título
-- **Abordagem:** Scraping TS + cheerio
-- **Acervo:** menor, mas útil como fallback
+### Fallback BR complementar: QueroLer.com (fase 2.5) ✅ IMPLEMENTADO
+- **Site:** https://queroler.com — Next.js SSR, busca por query param
+- **Abordagem:** Scraping TS + cheerio (Next.js SSR, HTML estruturado)
+- **Acervo:** menor (~63 caps por manga), PDF-only (sem reader online)
+- **Busca:** SSR via `GET /manga/?query={term}` — parse de `div.manga-card` com UUID, título, capa, autor
+- **Detalhes:** `GET /manga/{uuid}/` — parse SSR com tags semânticas (h1.font-serif, manga-detail-cover, manga-detail-info, manga-description)
+- **Capítulos:** Tabela HTML `#chapters-body` com dados em `data-chapter-id` + API paginada `GET /manga/{uuid}/capitulos/?page=N`
+- **Páginas:** ❌ Não implementado — QueroLer só disponibiliza PDF para download, sem reader online
+- **Covers:** `GET /manga/cover/?id={uuid}&f={filename}.{ext}.256.jpg` (UUID-based, não sequencial)
+- **Adblock detection:** Bloqueia conteúdo se scripts de tracking não carregarem — detecção por keywords no HTML + retry 1x
+- **Rate limiting:** 800ms mínimo entre requests para evitar bloqueio
+- **Cache:** `ql:*` prefix no PostgreSQL (TTL 30min)
+- **Fallback chain:** Incluído em `searchAllSources` e `findAlternativesForReader` (ignorado para leitura — PDF-only)
 
 ### Outros agregadores considerados (status)
 | Fonte | Status | Motivo |
@@ -280,9 +294,11 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   │   ├── mangafire.ts           # Scraper MangaFire (cheerio, AJAX, proxy)
 │   │   ├── mangastop.ts           # Scraper MangaStop.net (cheerio, _ts_internal_config)
 │   │   ├── leiturmanga.ts         # Scraper LeituraManga.net (cheerio, Next.js SSR)
+│   │   ├── queroler.ts            # Scraper QueroLer.com (cheerio, SSR, PDF-only)
 │   │   └── sitemap.ts             # Parser de sitemaps XML (MangaStop + LeituraManga)
 │   ├── cache.ts                   # Cache layer (banco, TTL 30min)
 │   ├── db.ts                      # Conexão com banco (lazy init)
+│   ├── source-fallback.ts         # Cross-source fallback chain (search, dedup, equivalent manga/chapter)
 │   ├── sources.ts                 # Unified adapter multi-source
 │   └── utils.ts                   # Helpers (formatação, data, etc.)
 ├── components/
@@ -299,7 +315,8 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   ├── mangadex.ts               # Tipos TypeScript da API + helpers
 │   ├── mangafire.ts              # Tipos MangaFire scraper + helpers
 │   ├── mangastop.ts              # Tipos MangaStop scraper + helpers
-│   └── leiturmanga.ts            # Tipos LeituraManga scraper + helpers
+│   ├── leiturmanga.ts            # Tipos LeituraManga scraper + helpers
+│   └── queroler.ts               # Tipos QueroLer scraper + helpers
 ├── db/
 │   └── migrate.ts                 # Script de migração
 ├── .env.local                     # Variáveis de ambiente (local)
@@ -359,7 +376,7 @@ CREATE TABLE IF NOT EXISTS reading_history (
 2. **MangaFire** — fallback principal (gringo com PT-BR via scraping) ✅
 3. **MangaStop.net** — fallback BR primário (WordPress mangareader, Cloudflare) ✅
 4. **LeituraManga.net** — fallback BR secundário (Next.js, RSC) ✅
-5. **QueroLer.com** — fallback BR complementar (pendente)
+5. **QueroLer.com** — fallback BR complementar (search-only, PDF) ✅
 6. **MangaPlus** — oficial Shueisha (capítulos recentes PT-BR)
 7. **MangaFox** — fallback EN apenas
 8. **Scanlators individuais BR** — apenas sob demanda
@@ -521,8 +538,8 @@ function slugify(title: string): string
 
 ### Fase 2 — Melhorias no Leitor (1-2 semanas)
 
-- [ ] Image Proxy (/api/proxy) ← KevinLmn
-- [ ] Quality Toggle (high/data-saver) ← KevinLmn/Akari
+- [x] Image Proxy (/api/proxy) ← KevinLmn ✅
+- [x] Quality Toggle (high/data-saver) ← KevinLmn/Akari ✅
 - [ ] Continue Reading (localStorage) ← KevinLmn
 - [ ] Favorites (localStorage) ← Todos
 - [ ] Preload Capítulo (75%) ← Akari
@@ -542,7 +559,7 @@ function slugify(title: string): string
 - [x] Cache PostgreSQL multi-source: MangaFire + MangaStop (prefixos `mf:*`, `ms:*`) ✅
 - [x] Dump do catálogo MangaStop (script + tabela manga_catalog, 2456 mangás) ✅
 - [x] Integração LeituraManga.net ✅
-- [ ] Integração QueroLer.com
+- [x] Integração QueroLer.com (search-only, PDF, rate-limited) ✅
 
 ### Fase 3 — Usuários + Gringos
 
@@ -552,13 +569,12 @@ function slugify(title: string): string
 - [ ] Favoritar mangás
 - [ ] Histórico de leitura
 - [ ] Continuar de onde parou
-- [ ] Cliente Comick API (lib/api/comick.ts) — fallback gringo
-- [ ] Cliente MangaFire (lib/api/mangafire.ts) — fallback gringo
+- [x] Cliente MangaFire (lib/api/mangafire.ts) — fallback gringo ✅
 - [ ] Lógica de fallback no cache layer para fontes gringas
 
 ### Fase 4 — Features extras
 
-- [ ] Modo leitura vertical (webtoon)
+- [x] Modo leitura vertical (webtoon) ✅
 - [ ] Comentários via Disqus/utterances
 - [ ] PWA (instalável)
 - [ ] Tema escuro/claro
