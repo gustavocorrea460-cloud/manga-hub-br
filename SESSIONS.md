@@ -11,6 +11,65 @@
 
 ---
 
+## Sessão 19 — 2026-05-31 | Fase 0 — Correção de fatos errados na documentação
+
+**O que foi feito:**
+- **Análise crítica do sistema de memória** — identificados 26 gaps nos 3 arquivos (AGENTS.md, MEMORY.md, SESSIONS.md)
+- **Plano de refinamento criado** em 4 fases (0: Correções Críticas, 1: Separação de Responsabilidades, 2: Gap Filling, 3: Resiliência Estrutural)
+- **Fase 0 executada:**
+  - Removidas referências ao Comick (morto desde set/2025) do fluxograma e roadmap
+  - Marcados como `[x]` no roadmap: Image Proxy, Quality Toggle, Modo Webtoon (já implementados)
+  - Marcado como `[x]` no roadmap: MangaFire (implementado na Sessão 12)
+  - Unificadas as duas versões da "primeira ação ao perder contexto" em uma única canônica (6 passos)
+  - Removida linha duplicada de fontes (AGENTS.md linha 89 vs linha 92)
+
+**Decisões:**
+- Fase 0 primeiro por serem fatos errados que enganam o agente na recuperação de contexto
+- Versão canônica final da "primeira ação" inclui `.env.example` (6 passos)
+
+**Estado do build:** ✅ Compilando (8 routes)
+**Commit:** `f33b65b`
+
+**Próximos passos:**
+- [ ] Fase 1 — Separar responsabilidades: AGENTS.md vira protocolo puro, MEMORY.md vira knowledge base
+- [ ] Fase 2 — Preencher lacunas (componentes faltantes, Node version, RESEARCH.md referência)
+- [ ] Fase 3 — TIMELINE.md, propagar decisões do SESSIONS.md, discoveries/
+
+**Blocadores:** Nenhum
+
+---
+
+## Sessão 18 — 2026-05-24 | QueroLer 5ª fonte + fallback chain + rate limiting
+
+**O que foi feito:**
+- **QueroLer scraper** (`lib/api/queroler.ts`):
+  - `searchManga(query)` — SSR via `/manga/?query=X`, parse de `div.manga-card`
+  - `getManga(uuid)` — parse de `/manga/{uuid}/` com título, capa, status, autor, ano, gêneros, descrição, títulos alternativos
+  - `getChapters(uuid)` — tabela HTML `#chapters-body` + API paginada `/manga/{uuid}/capitulos/?page=N` para mais páginas
+- **Rate limiting + Adblock detection** — `MIN_REQUEST_GAP_MS = 800ms` via `rateLimitedFetch`; `isAdblocked()` checa keywords de bloqueio no HTML e retenta 1x após 2s
+- **Tipos criados** (`types/queroler.ts`) — `QueroLerManga`, `QueroLerChapter`, helper `extractUuidFromSlug`
+- **Cache layer** (`lib/cache.ts`) — `ql:*` prefix: `searchQueroLerCached`, `getQueroLerMangaCached`, `getQueroLerChaptersCached`
+- **Unified adapter** (`lib/sources.ts`) — `"queroler"` em `SourceId`, dispatch em todas as funções (`searchSource`, `getMangaSource`, `getChaptersSource`, `getChapterPagesSource`)
+- **SourceBadge** (`components/SourceBadge.tsx`) — violeta para QueroLer (`bg-violet-500/15 text-violet-400 border-violet-500/30`)
+- **Fallback chain** (`lib/source-fallback.ts`) — QueroLer em `searchAllSources`, `deduplicateResults`, `findAlternativesForReader`
+- **Detalhe** (`app/manga/[slug]/page.tsx`) — `MangaDetailQueroLer` + `ChaptersSectionQueroLer` com links externos pra PDF
+- **Leitor** (`app/leitor/[chapterId]/page.tsx`) — `QueroLerReader` informa "PDF only" e sugere usar outra fonte
+- **Busca** (`app/busca/page.tsx`) — `QueroLerResults` + toggle QueroLer no `SourceToggle`
+- **Build: ✅** compila sem erros (9 routes)
+
+**Decisões:**
+- QueroLer como **search-only** (sem dump de catálogo) — PDF-only não serve como fallback de leitura
+- Rate limit 800ms entre requests + adblock detection para evitar bloqueio
+- Sem getChapterPages (QueroLer não tem reader online, só PDF)
+
+**Próximos passos:**
+- [ ] Testar QueroLer em produção: `/busca?source=queroler&q=one+piece`
+- [ ] Considerar MangaPlus (oficial Shueisha) como próxima fonte
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 17 — 2026-05-24 | LeituraManga.net Scraper + Catálogo + 4-fontes
 
 **O que foi feito:**
