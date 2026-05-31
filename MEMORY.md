@@ -2,16 +2,39 @@
 
 ## 📋 Ficha Técnica
 
-- **Projeto:** Manga Hub BR — agregador de mangás em português brasileiro
-- **Stack:** Next.js 16 (App Router) + TypeScript + Tailwind CSS v4
-- **Database:** PostgreSQL (Neon — free tier)
-- **Hospedagem:** Vercel (gratuito)
-- **Autenticação:** NextAuth.js
-- **Cache:** Tabelas PostgreSQL + GitHub Actions (cron 30min)
-- **Domínio:** registro.br (~R$ 40/ano)
-- **Monetização:** Doações/Pix (sem anúncios — viola ToS da MangaDex)
-- **Nível do usuário:** Iniciante
-- **Idioma:** PT-BR (conteúdo já traduzido por scanlators, sem tradução automática)
+| Item | Valor |
+|---|---|
+| **Projeto** | Manga Hub BR — agregador de mangás em português brasileiro |
+| **Stack** | Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 |
+| **Database** | PostgreSQL (Neon — free tier) |
+| **Deploy** | Vercel (gratuito) — https://manga-hub-br.vercel.app |
+| **Autenticação** | NextAuth.js v5 (estrutura, sem providers ainda) |
+| **Cache** | Tabelas PostgreSQL + GitHub Actions (cron 30min, TTL 30min) |
+| **Domínio** | registro.br (~R$ 40/ano) |
+| **Monetização** | Doações/Pix (sem anúncios — viola ToS da MangaDex) |
+| **Nível do usuário** | Iniciante |
+| **Idioma** | PT-BR (conteúdo já traduzido por scanlators, sem tradução automática) |
+| **Repo** | https://github.com/gustavocorrea460-cloud/manga-hub-br |
+| **Plan Mode** | `/plan` para planejar, sem edições |
+
+### 🚀 Status Atual
+
+**Fase atual:** 2.5 — Fontes Alternativas (5 fontes integradas) ✅
+**Build:** ✅ Compilando (8 routes: /, /busca, /catalogo, /manga/[slug], /leitor/[chapterId], /api/auth, /api/cron, /api/proxy)
+**Última sessão:** Sessão 19 — Fase 0 de correção da documentação
+
+**Features implementadas:**
+- Home com grid de lançamentos + paginação (`?page=N`)
+- Detalhes do mangá (capa, status, tags, autor, descrição, scanlators, source badge)
+- Leitor com: teclado (← → Espaço), clique lateral, navegação entre caps, Data Saver, scanlator visível, modo webtoon
+- Busca por texto com paginação + filtros avançados (`?q=&page=&status=&year=`)
+- **5 fontes**: MangaDex, MangaFire, MangaStop.net, LeituraManga.net, QueroLer.com
+- **Source toggle** na busca com fallback chain automática
+- **Image proxy** `/api/proxy?url=` para bypass de CORS/hotlink
+- **Catálogo** `/catalogo` com grid, paginação e filtro por fonte
+- Cache PostgreSQL com fallback se API cair
+- Tema escuro (#0f0f0f + accent roxo #6c5ce7)
+- Cron de atualização automática (GitHub Actions a cada 30min)
 
 ---
 
@@ -303,11 +326,13 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   └── utils.ts                   # Helpers (formatação, data, etc.)
 ├── components/
 │   ├── Pagination.tsx             # Componente de paginação compartilhado
-│   ├── MangaCard.tsx              # Card de mangá na grid
+│   ├── MangaCard.tsx              # Card de mangá na grid (suporta source badge)
 │   ├── ChapterList.tsx            # Lista de capítulos
-│   ├── Reader.tsx                 # Leitor (teclado, clique lateral, navegação caps)
+│   ├── Reader.tsx                 # Leitor (teclado, clique lateral, navegação caps, webtoon)
 │   ├── Navbar.tsx                 # Navegação superior
-│   ├── SearchBar.tsx              # Input de busca (mantém query)
+│   ├── SearchBar.tsx              # Input de busca (mantém query + source)
+│   ├── SearchFilters.tsx          # Filtros avançados (status, ano, tags, gêneros)
+│   ├── SourceBadge.tsx            # Badge visual de identificação de fonte
 │   ├── LoadingSkeleton.tsx        # Skeleton de loading
 │   ├── ErrorMessage.tsx           # Mensagem de erro
 │   └── EmptyState.tsx             # Estado vazio
@@ -317,14 +342,26 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   ├── mangastop.ts              # Tipos MangaStop scraper + helpers
 │   ├── leiturmanga.ts            # Tipos LeituraManga scraper + helpers
 │   └── queroler.ts               # Tipos QueroLer scraper + helpers
+├── scripts/
+│   ├── dump-mangastop.ts          # Dump do catálogo MangaStop (2456 mangás)
+│   └── dump-leiturmanga.ts        # Dump do catálogo LeituraManga.net
 ├── db/
 │   └── migrate.ts                 # Script de migração
 ├── .env.local                     # Variáveis de ambiente (local)
 ├── .github/
 │   └── workflows/
 │       └── update-cache.yml       # GitHub Actions cron (usa CRON_SECRET + VERCEL_URL)
-├── MEMORY.md                      # Este arquivo
-└── AGENTS.md                      # Instruções para IA
+├── MEMORY.md                      # Fonte de verdade do projeto (arquitetura, schema, roadmap, decisões)
+├── SESSIONS.md                    # Log de sessões append-only
+├── AGENTS.md                      # Instruções para a IA (protocolo)
+├── RESEARCH.md                    # Pesquisa de viabilidade de fontes
+├── CLAUDE.md                      # @AGENTS.md
+├── next.config.ts                 # Next.js config (remotePatterns, etc.)
+├── package.json                   # Dependências + scripts
+├── tsconfig.json                  # TypeScript config
+├── eslint.config.mjs              # ESLint config
+├── postcss.config.mjs              # PostCSS config
+└── README.md                      # Visão geral do projeto
 ```
 
 ---
@@ -590,8 +627,8 @@ function slugify(title: string): string
 ## ⚙️ Setup Inicial
 
 ```bash
-# Node.js 18+ necessário
-node -v  # >= 18
+# Node.js 20.12+ necessário (usa --env-file nativo)
+node -v  # >= 20.12
 
 # Criar projeto
 npx create-next-app@latest manga-hub-br --typescript --tailwind --eslint --app --src-dir=false --import-alias="@/*"
@@ -616,6 +653,8 @@ NEXTAUTH_URL=http://localhost:3000
 - **NextAuth.js:** https://next-auth.js.org
 - **Next.js Docs:** https://nextjs.org/docs
 - **Mangaeon (inspiração):** https://github.com/oMatheuss/mangaeon
+- **RESEARCH.md** — pesquisa de viabilidade de 17+ fontes BR (resultados completos da varredura)
+- **README.md** — visão geral do projeto
 
 ---
 

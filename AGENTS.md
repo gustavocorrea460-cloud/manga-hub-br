@@ -62,83 +62,11 @@ Antes de qualquer ação, verifique:
 | 8 | Turbopack é default | Use `--webpack` se necessário |
 
 <!-- ====================================================================== -->
-<!-- PROJETO — CONTEXTO COMPLETO                                           -->
+<!-- PROJETO — REFERÊNCIAS RÁPIDAS                                        -->
 <!-- ====================================================================== -->
 
-## 📋 Ficha Rápida
-
-| Item | Valor |
-|---|---|---|
-| Projeto | Manga Hub BR — agregador mangás PT-BR |
-| Stack | Next.js 16 + TypeScript + Tailwind CSS v4 |
-| DB | Neon PostgreSQL (serverless, free) |
-| Deploy | Vercel (free) — https://manga-hub-br.vercel.app |
-| Auth | NextAuth.js v5 (estrutura, sem providers ainda) |
-| Cache | Tabelas PostgreSQL (TTL 30min) com fallback expirado |
-| Cron | GitHub Actions (30min) — CRON_SECRET + VERCEL_URL configurados |
-| Fontes | MangaDex API (primária) + MangaFire scraper + MangaStop.net (BR) + LeituraManga.net (BR) + QueroLer.com (BR, search-only) |
-| Repo | https://github.com/gustavocorrea460-cloud/manga-hub-br |
-| Plan Mode | `/plan` para planejar, sem edições |
-
-### Features implementadas (Fase 1 + 1.5 + Multi-source)
-- Home com grid de lançamentos + paginação (`?page=N`)
-- Detalhes do mangá (capa, status, tags, autor, descrição, scanlators)
-- Leitor com: teclado (← → Espaço), clique lateral, navegação entre caps, Data Saver, scanlator visível
-- Busca por texto com paginação (`?q=&page=`)
-- Cache PostgreSQL com fallback se API cair
-- Tema escuro (#0f0f0f + accent roxo #6c5ce7)
-- Cron de atualização automática (GitHub Actions a cada 30min)
-- **Multi-source**: `?source=mangafire|mangastop|leiturmanga|queroler` na busca, detalhes e leitor
-- **Image proxy**: `/api/proxy?url=` para bypass de CORS/hotlink
-- **Source toggle** na página de busca (MangaDex ↔ MangaFire ↔ MangaStop ↔ LeituraManga ↔ QueroLer)
-- **Fallback chain** automática entre fontes (reader + detail page)
-
-## 📁 Estrutura
-
-```
-/
-├── app/
-│   ├── page.tsx                    # Home (lançamentos + paginação)
-│   ├── layout.tsx                  # Layout + Navbar
-│   ├── globals.css                 # Tema escuro + Tailwind
-│   ├── not-found.tsx / error.tsx / loading.tsx
-│   ├── manga/[slug]/page.tsx       # Detalhes do mangá
-│   ├── leitor/[chapterId]/page.tsx # Leitor (teclado, navegação caps)
-│   ├── busca/page.tsx              # Busca com paginação + source toggle
-│   └── api/
-│       ├── auth/[...nextauth]/route.ts
-│       ├── cron/update-cache/route.ts  # force-dynamic
-│       └── proxy/route.ts              # Image proxy CORS (force-dynamic)
-├── components/
-│   ├── Pagination.tsx              # Paginação compartilhada
-│   ├── MangaCard.tsx               # Card de mangá na grid
-│   ├── ChapterList.tsx             # Lista de capítulos
-│   ├── Reader.tsx                  # Leitor (suporta absoluteUrls)
-│   ├── Navbar.tsx                  # Navbar com busca inline
-│   ├── SearchBar.tsx               # Input de busca (mantém query + source)
-│   ├── LoadingSkeleton.tsx         # Skeletons
-│   ├── ErrorMessage.tsx            # Mensagem de erro
-│   └── EmptyState.tsx              # Estado vazio
-├── lib/
-│   ├── api/mangadex.ts             # Cliente MangaDex ({ data, total })
-│   ├── api/mangafire.ts            # Scraper MangaFire (cheerio + AJAX)
-│   ├── api/mangastop.ts            # Scraper MangaStop.net (cheerio + _ts_internal_config)
-│   ├── api/sitemap.ts              # Parser sitemaps XML (getAllMangaStopSlugs)
-│   ├── cache.ts                    # Cache layer (TTL 30min, fallback multi-source)
-│   ├── sources.ts                  # Unified adapter multi-source
-│   ├── db.ts                       # Neon SQL queries (lazy init)
-│   └── utils.ts                    # Helpers (date, format, cn)
-├── types/
-│   ├── mangadex.ts                 # Tipos + helpers (getTitle, getScanlatorName...)
-│   ├── mangafire.ts                # Tipos MangaFire scraper
-│   └── mangastop.ts                # Tipos MangaStop scraper
-├── db/migrate.ts                   # Migration script
-├── .env.example                    # Template de variáveis
-├── MEMORY.md                       # Documentação completa
-├── SESSIONS.md                     # Log de sessões (append-only)
-├── AGENTS.md                       # Este arquivo
-└── CLAUDE.md                       # @AGENTS.md
-```
+> 📌 **Contexto completo do projeto:** `MEMORY.md` (arquitetura, fontes, schema, roadmap, decisões)
+> 📌 **Log de sessões:** `SESSIONS.md` (histórico append-only de cada sessão)
 
 ## 🧠 Convenções de Código
 
@@ -164,35 +92,6 @@ import { useState } from "react"
 // API RETURN: getLatestMangas/searchManga → { data: Manga[], total: number }
 // LEITOR: mangaId passado como ?mangaId= no search param
 // MULTI-SOURCE: parâmetro ?source=mangadex|mangafire|mangastop nas páginas
-// MANGA FIRE: scraper via cheerio + AJAX endpoints (/ajax/read/...)
-//   search: /filter?keyword=X&page=N
-//   detail: /manga/{id}
-//   chapters: /ajax/read/{numId}/chapter/{lang}  (GET, JSON response)
-//   pages: /ajax/read/chapter/{chapterId}  (GET, JSON response)
-//   proxy: /api/proxy?url=X (imagens com hotlink protection)
-// MANGA STOP: scraper via cheerio (WordPress mangareader theme)
-//   search: /?s={query}  (WordPress native search)
-//   detail: /manga/{slug}/
-//   chapters: parse from #chapterlist / ul.clstyle
-//   pages: fetch chapter page, extract _ts_internal_config, atob(token)
-//   origin CDN: comick.jeffersondev.xyz (no hotlink — URLs diretas no <img>)
-// LEITURA MANGA: scraper via cheerio (Next.js SSR)
-//   search: /?s={query} (NÃO FUNCIONA — retorna vazio)
-//   detail: /manga/{slug}/ — parse SSR (título, capa CDN, status, autor, gêneros)
-//   chapters: range derivado de first/last chapter (limite 500)
-//   pages: extrai <img> do CDN em /manga/{slug}/chapter/{num}/
-//   CDN: cdn.leituramanga.net (sem hotlink)
-// QUEROLER: scraper via cheerio (Next.js SSR, PDF-only)
-//   search: /manga/?query={term} (SSR, parse manga-card)
-//   detail: /manga/{uuid}/ — parse SSR (h1.font-serif, manga-detail-*)
-//   chapters: tabela HTML #chapters-body + API paginada /manga/{uuid}/capitulos/?page=N
-//   pages: ❌ NÃO TEM (PDF-only, sem reader online)
-//   covers: /manga/cover/?id={uuid}&f={filename}.{ext}.256.jpg
-//   rate limit: 800ms entre requests
-//   adblock: detection + retry 1x
-// SOURCE TOGGLE: componente SourceToggle disponível em /busca (5 fontes)
-// FALLBACK CHAIN: lib/source-fallback.ts — searchAllSources, deduplicateResults, findAlternativesForReader
-// IMAGE PROXY: /api/proxy?url= para CORS/hotlink bypass (mangafire.to)
 ```
 
 ## 📦 Comandos Úteis
@@ -202,10 +101,11 @@ npm run dev          # Dev server (http://localhost:3000)
 npm run build        # Build de produção
 npm run typecheck    # TypeScript check sem build
 npm run lint         # ESLint
-npm run db:migrate   # Rodar migrations no Neon (precisa .env.local)
-npm run db:dump      # Dump completo do catálogo MangaStop (2456 mangás, ~30min)
-npm run db:dump -- --quick  # Dump rápido (150ms rate limit, ~15min)
-npm run setup        # cp .env.example .env.local
+npm run db:migrate         # Rodar migrations no Neon (precisa .env.local)
+npm run db:dump            # Dump catálogo MangaStop (2456 mangás, ~30min)
+npm run db:dump -- --quick # Dump rápido MangaStop (150ms rate limit, ~15min)
+npm run db:dump:leiturmanga # Dump catálogo LeituraManga.net
+npm run setup              # cp .env.example .env.local
 ```
 
 ## 🔗 Referências
