@@ -1,23 +1,33 @@
 import { Suspense } from "react"
-import Image from "next/image"
 import Link from "next/link"
+import Image from "next/image"
 import SearchBar from "@/components/SearchBar"
 import SearchFilters from "@/components/SearchFilters"
 import MangaCard from "@/components/MangaCard"
 import Pagination from "@/components/Pagination"
 import ErrorMessage from "@/components/ErrorMessage"
 import EmptyState from "@/components/EmptyState"
+import SourceToggle from "@/components/SourceToggle"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { searchMangaWithFilters } from "@/lib/api/mangadex"
-import { getTagsCached, searchMangaFireCached, searchMangaStopCached, searchNexusCached } from "@/lib/cache"
+import {
+  getTagsCached,
+  searchMangaFireCached,
+  searchMangaStopCached,
+  searchNexusCached,
+} from "@/lib/cache"
 import SourceBadge from "@/components/SourceBadge"
 import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/mangadex"
-import { searchQueroLerCached } from "@/lib/cache"
 import type { NexusManga } from "@/types/nexustoons"
+import {
+  fromMangaDex,
+  fromMangaFire,
+  fromMangaStop,
+  fromNexus,
+} from "@/lib/adapters"
+import type { SourceId } from "@/components/SourceBadge"
 
 const LIMIT = 30
-
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
 
 function parseFilters(
   params: Awaited<SearchParamsType>,
@@ -32,6 +42,9 @@ function parseFilters(
     ? params.excludedTags.split(",").filter(Boolean)
     : undefined
 
+  const validSources: SourceId[] = ["mangadex", "mangafire", "mangastop", "leiturmanga", "nexustoons"]
+  const source = (params.source as SourceId) || "mangadex"
+
   return {
     q: params.q || undefined,
     status: status && status.length > 0 ? status : undefined,
@@ -40,7 +53,7 @@ function parseFilters(
     includedTags: includedTags && includedTags.length > 0 ? includedTags : undefined,
     excludedTags: excludedTags && excludedTags.length > 0 ? excludedTags : undefined,
     page: Math.max(1, Number(params.page) || 1),
-    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : params.source === "nexustoons" ? "nexustoons" : "mangadex",
+    source: validSources.includes(source) ? source : "mangadex",
   }
 }
 
@@ -57,364 +70,138 @@ type SearchParamsType = Promise<{
 
 async function SearchResults({ filters }: { filters: ReturnType<typeof parseFilters> }) {
   const source = filters.source || "mangadex"
+  const query = filters.q || ""
 
-  if (source === "mangafire") {
-    return <MangaFireResults query={filters.q || ""} page={filters.page} />
-  }
-
-  if (source === "mangastop") {
-    return <MangaStopResults query={filters.q || ""} />
-  }
-
-  if (source === "leiturmanga") {
-    return <MangaFireResults query={filters.q || ""} page={filters.page} />
-  }
-
-  if (source === "queroler") {
-    return <QueroLerResults query={filters.q || ""} />
-  }
-
-  if (source === "nexustoons") {
-    return <NexusResults query={filters.q || ""} page={filters.page} />
-  }
-
-  let result
   try {
-    result = await searchMangaWithFilters({ ...filters, limit: LIMIT })
+    if (source === "mangafire") {
+      const res = await searchMangaFireCached(query, filters.page)
+      const mangas = res.results.map((r, i) => fromMangaFire(r))
+      if (mangas.length === 0) return <EmptyState title={`Nenhum resultado para "${query}" no MangaFire`} />
+      const pages = res.totalPages || 1
+      return (
+        <Grid
+          mangas={mangas}
+          source="mangafire"
+          total={res.results.length}
+          query={query}
+          page={filters.page}
+          pages={pages}
+          pageLimit={LIMIT}
+        />
+      )
+    }
+
+    if (source === "mangastop") {
+      const res = await searchMangaStopCached(query)
+      const mangas = res.map((r) => fromMangaStop(r))
+      if (mangas.length === 0) return <EmptyState title={`Nenhum resultado para "${query}" no MangaStop`} />
+      return (
+        <Grid
+          mangas={mangas}
+          source="mangastop"
+          total={mangas.length}
+          query={query}
+          page={filters.page}
+          pages={1}
+          pageLimit={LIMIT}
+        />
+      )
+    }
+
+    if (source === "leiturmanga") {
+      // LeituraManga não tem busca (source de navegação via catálogo)
+      return (
+        <EmptyState
+          title={`LeituraManga não tem busca`}
+          description="Esta fonte funciona pelo catálogo. Use a aba Catálogo ou outra fonte."
+        />
+      )
+    }
+
+    if (source === "nexustoons") {
+      const res = await searchNexusCached(query, filters.page)
+      const mangas = res.data.map((m: NexusManga) => fromNexus(m))
+      if (mangas.length === 0) return <EmptyState title={`Nenhum resultado para "${query}" no Nexus`} />
+      const pages = Math.ceil(res.total / 24) || 1
+      return (
+        <Grid
+          mangas={mangas}
+          source="nexustoons"
+          total={res.total}
+          query={query}
+          page={filters.page}
+          pages={pages}
+          pageLimit={24}
+        />
+      )
+    }
+
+    // MangaDex (default — com filtros)
+    const { data: mangas, total } = await searchMangaWithFilters({ ...filters, limit: LIMIT })
+    if (mangas.length === 0) {
+      const hasQuery = !!filters.q
+      const hasFilters = !!filters.status || !!filters.order || !!filters.year
+        || !!filters.includedTags || !!filters.excludedTags
+      return (
+        <EmptyState
+          title={hasQuery ? `Nenhum resultado para "${filters.q}"` : hasFilters ? "Nenhum resultado com esses filtros" : "Nenhum mangá encontrado"}
+          description={hasQuery ? "Tente usar termos diferentes ou ajuste os filtros." : hasFilters ? "Tente remover alguns filtros para ver mais resultados." : undefined}
+        />
+      )
+    }
+    return (
+      <Grid
+        mangas={mangas.map((m) => fromMangaDex(m))}
+        source="mangadex"
+        total={total}
+        query={query}
+        page={filters.page}
+        pages={Math.ceil(total / LIMIT) || 1}
+        pageLimit={LIMIT}
+      />
+    )
   } catch {
     return <ErrorMessage message="Erro ao buscar. Tente novamente." />
   }
-
-  const { data: mangas, total } = result
-  const hasQuery = !!filters.q
-  const hasFilters = !!filters.status || !!filters.order || !!filters.year
-    || !!filters.includedTags || !!filters.excludedTags
-
-  if (mangas.length === 0) {
-    const message = hasQuery
-      ? `Nenhum resultado para "${filters.q}"`
-      : hasFilters
-        ? "Nenhum resultado com esses filtros"
-        : "Nenhum mangá encontrado"
-    const description = hasQuery
-      ? "Tente usar termos diferentes ou ajuste os filtros."
-      : hasFilters
-        ? "Tente remover alguns filtros para ver mais resultados."
-        : undefined
-    return <EmptyState title={message} description={description} />
-  }
-
-  function buildBasePath() {
-    const p = new URLSearchParams()
-    if (filters.q) p.set("q", filters.q)
-    if (filters.status && filters.status.length > 0) p.set("status", filters.status.join(","))
-    if (filters.order && filters.order !== "relevance") p.set("order", filters.order)
-    if (filters.year) p.set("year", String(filters.year))
-    if (filters.includedTags && filters.includedTags.length > 0) p.set("includedTags", filters.includedTags.join(","))
-    if (filters.excludedTags && filters.excludedTags.length > 0) p.set("excludedTags", filters.excludedTags.join(","))
-    const qs = p.toString()
-    return qs ? `/busca?${qs}` : "/busca"
-  }
-
-  return (
-    <div className="space-y-4">
-      {mangas.length > 0 && (
-        <p className="text-sm text-muted">
-          {total} resultado{total !== 1 ? "s" : ""}
-          {filters.q ? ` para "${filters.q}"` : ""}
-        </p>
-      )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {mangas.map(manga => (
-          <MangaCard key={manga.id} manga={manga} />
-        ))}
-      </div>
-      <Pagination
-        currentPage={filters.page}
-        total={total}
-        limit={LIMIT}
-        basePath={buildBasePath()}
-      />
-    </div>
-  )
 }
 
-async function MangaFireResults({ query, page }: { query: string; page: number }) {
-  if (!query) {
-    return <EmptyState title="Digite um termo para buscar no MangaFire" />
-  }
-
-  let result
-  try {
-    result = await searchMangaFireCached(query, page)
-  } catch {
-    return <ErrorMessage message="Erro ao buscar no MangaFire. Tente novamente." />
-  }
-
-  if (result.results.length === 0) {
-    return <EmptyState title={`Nenhum resultado para "${query}" no MangaFire`} />
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted">
-        {result.results.length} resultado{result.results.length !== 1 ? "s" : ""}
-        {query ? ` para "${query}"` : ""}
-        {" "}— Fonte: <span className="text-accent font-medium">MangaFire</span>
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {result.results.map(r => (
-          <Link
-            key={r.id}
-            href={`/manga/${r.id}?source=mangafire`}
-            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
-          >
-            <div className="relative aspect-[3/4] overflow-hidden bg-card">
-              {r.poster ? (
-                <Image
-                  src={r.poster}
-                  alt={r.title || ""}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 16vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted text-xs">
-                  Sem capa
-                </div>
-              )}
-              <div className="absolute top-1.5 left-1.5">
-                <SourceBadge source="mangafire" size="xs" />
-              </div>
-            </div>
-            <div className="px-2 pb-2">
-              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
-                {r.title}
-              </h3>
-              {r.type && (
-                <span className="text-[10px] text-muted mt-0.5 block">{r.type}</span>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
-      {result.totalPages > 1 && (
-        <div className="flex justify-center gap-2 pt-4">
-          {page > 1 && (
-            <Link
-              href={`/busca?q=${encodeURIComponent(query)}&source=mangafire&page=${page - 1}`}
-              className="px-3 py-1.5 rounded bg-card border border-border text-xs text-muted hover:text-foreground hover:border-accent transition-colors"
-            >
-              ← Anterior
-            </Link>
-          )}
-          {page < result.totalPages && (
-            <Link
-              href={`/busca?q=${encodeURIComponent(query)}&source=mangafire&page=${page + 1}`}
-              className="px-3 py-1.5 rounded bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors"
-            >
-              Próxima →
-            </Link>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-async function MangaStopResults({ query }: { query: string }) {
-  if (!query) {
-    return <EmptyState title="Digite um termo para buscar no MangaStop" />
-  }
-
-  let results
-  try {
-    results = await searchMangaStopCached(query)
-  } catch {
-    return <ErrorMessage message="Erro ao buscar no MangaStop. Tente novamente." />
-  }
-
-  if (results.length === 0) {
-    return <EmptyState title={`Nenhum resultado para "${query}" no MangaStop`} />
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted">
-        {results.length} resultado{results.length !== 1 ? "s" : ""}
-        {query ? ` para "${query}"` : ""}
-        {" "}— Fonte: <span className="text-accent font-medium">MangaStop</span>
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {results.map(r => (
-          <Link
-            key={r.id}
-            href={`/manga/${r.id}?source=mangastop`}
-            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
-          >
-            <div className="relative aspect-[3/4] overflow-hidden bg-card">
-              {r.coverUrl ? (
-                <Image
-                  src={r.coverUrl}
-                  alt={r.title || ""}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 16vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted text-xs">
-                  Sem capa
-                </div>
-              )}
-              <div className="absolute top-1.5 left-1.5">
-                <SourceBadge source="mangastop" size="xs" />
-              </div>
-            </div>
-            <div className="px-2 pb-2">
-              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
-                {r.title}
-              </h3>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-async function QueroLerResults({ query }: { query: string }) {
-  if (!query) {
-    return <EmptyState title="Digite um termo para buscar no QueroLer" />
-  }
-
-  let results
-  try {
-    results = await searchQueroLerCached(query)
-  } catch {
-    return <ErrorMessage message="Erro ao buscar no QueroLer. Tente novamente." />
-  }
-
-  if (results.length === 0) {
-    return <EmptyState title={`Nenhum resultado para "${query}" no QueroLer`} />
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted">
-        {results.length} resultado{results.length !== 1 ? "s" : ""}
-        {query ? ` para "${query}"` : ""}
-        {" "}— Fonte: <span className="text-accent font-medium">QueroLer</span>
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {results.map(r => (
-          <Link
-            key={r.id}
-            href={`/manga/${r.id}?source=queroler`}
-            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
-          >
-            <div className="relative aspect-[3/4] overflow-hidden bg-card">
-              {r.coverUrl ? (
-                <Image
-                  src={r.coverUrl}
-                  alt={r.title || ""}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 16vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted text-xs">
-                  Sem capa
-                </div>
-              )}
-              <div className="absolute top-1.5 left-1.5">
-                <SourceBadge source="queroler" size="xs" />
-              </div>
-            </div>
-            <div className="px-2 pb-2">
-              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
-                {r.title}
-              </h3>
-              {r.author && (
-                <span className="text-[10px] text-muted mt-0.5 block">{r.author}</span>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-async function NexusResults({ query, page }: { query: string; page: number }) {
-  if (!query) {
-    return <EmptyState title="Digite um termo para buscar no Nexus" />
-  }
-
-  let result
-  try {
-    result = await searchNexusCached(query, page)
-  } catch {
-    return <ErrorMessage message="Erro ao buscar no Nexus. Tente novamente em instantes." />
-  }
-
-  const mangas = result.data || []
-  const total = result.total || 0
-
-  if (mangas.length === 0) {
-    return <EmptyState title={`Nenhum resultado para "${query}" no Nexus`} />
-  }
-
-  const limit = 24
-  const pages = Math.ceil(total / limit) || 1
-
+function Grid({
+  mangas,
+  source,
+  total,
+  query,
+  page,
+  pages,
+  pageLimit,
+}: {
+  mangas: ReturnType<typeof fromMangaDex>[]
+  source: SourceId
+  total: number
+  query: string
+  page: number
+  pages: number
+  pageLimit: number
+}) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
         {total} resultado{total !== 1 ? "s" : ""}
         {query ? ` para "${query}"` : ""}
-        {" "}— Fonte: <span className="text-accent font-medium">Nexus</span>
+        {" "}— Fonte: <span className="text-accent font-medium"><SourceBadge source={source} size="xs" /></span>
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {mangas.map((m: NexusManga) => (
-          <Link
-            key={m.id}
-            href={`/manga/${m.slug || m.id}?source=nexustoons`}
-            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
-          >
-            <div className="relative aspect-[3/4] overflow-hidden bg-card">
-              {m.coverImage ? (
-                <Image
-                  src={m.coverImage}
-                  alt={m.title || ""}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 16vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted text-xs">
-                  Sem capa
-                </div>
-              )}
-              <div className="absolute top-1.5 left-1.5">
-                <SourceBadge source="nexustoons" size="xs" />
-              </div>
-            </div>
-            <div className="px-2 pb-2">
-              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
-                {m.title}
-              </h3>
-              {m.type && (
-                <span className="text-[10px] text-muted mt-0.5 block uppercase">{m.type}</span>
-              )}
-            </div>
-          </Link>
+        {mangas.map((m, i) => (
+          <MangaCard key={`${source}-${m.id}`} manga={m} index={i} />
         ))}
       </div>
-      {pages > 1 && <Pagination currentPage={page} total={total} limit={limit} basePath={`/busca?q=${encodeURIComponent(query)}&source=nexustoons`} />}
+      {pages > 1 && (
+        <Pagination
+          currentPage={page}
+          total={total}
+          limit={pageLimit}
+          basePath={query ? `/busca?q=${encodeURIComponent(query)}&source=${source}` : `/busca?source=${source}`}
+        />
+      )}
     </div>
   )
 }
@@ -431,16 +218,19 @@ export default async function BuscaPage({
 }) {
   const params = await searchParams
   const filters = parseFilters(params)
-  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : params.source === "nexustoons" ? "nexustoons" : "mangadex"
+  const source = filters.source
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Buscar Mangás</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Buscar Mangás</h1>
+        <p className="text-muted text-sm mt-1">Encontre seu próximo mangá em todas as fontes</p>
+      </div>
 
       <SearchBar initialQuery={params.q || ""} source={source} />
 
-      <div className="flex gap-1.5 items-center">
-        <span className="text-xs text-muted">Fonte:</span>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted-foreground">Fonte:</span>
         <SourceToggle current={source} query={params.q} />
       </div>
 
@@ -450,80 +240,9 @@ export default async function BuscaPage({
         </Suspense>
       )}
 
-      <Suspense
-        fallback={<MangaGridSkeleton />}
-        key={JSON.stringify(filters)}
-      >
+      <Suspense fallback={<MangaGridSkeleton />} key={JSON.stringify(filters)}>
         <SearchResults filters={filters} />
       </Suspense>
-    </div>
-  )
-}
-
-function SourceToggle({ current, query }: { current: string; query?: string }) {
-  const baseUrl = query ? `/busca?q=${encodeURIComponent(query)}` : "/busca"
-  return (
-    <div className="flex gap-1">
-      <Link
-        href={baseUrl}
-        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-          current === "mangadex"
-            ? "bg-accent text-white"
-            : "bg-card border border-border text-muted hover:text-foreground"
-        }`}
-      >
-        MangaDex
-      </Link>
-      <Link
-        href={`${baseUrl}&source=mangafire`}
-        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-          current === "mangafire"
-            ? "bg-accent text-white"
-            : "bg-card border border-border text-muted hover:text-foreground"
-        }`}
-      >
-        MangaFire
-      </Link>
-      <Link
-        href={`${baseUrl}&source=mangastop`}
-        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-          current === "mangastop"
-            ? "bg-accent text-white"
-            : "bg-card border border-border text-muted hover:text-foreground"
-        }`}
-      >
-        MangaStop
-      </Link>
-      <Link
-        href={`${baseUrl}&source=leiturmanga`}
-        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-          current === "leiturmanga"
-            ? "bg-accent text-white"
-            : "bg-card border border-border text-muted hover:text-foreground"
-        }`}
-      >
-        LeituraManga
-      </Link>
-      <Link
-        href={`${baseUrl}&source=queroler`}
-        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-          current === "queroler"
-            ? "bg-accent text-white"
-            : "bg-card border border-border text-muted hover:text-foreground"
-        }`}
-      >
-        QueroLer
-      </Link>
-      <Link
-        href={`${baseUrl}&source=nexustoons`}
-        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-          current === "nexustoons"
-            ? "bg-accent text-white"
-            : "bg-card border border-border text-muted hover:text-foreground"
-        }`}
-      >
-        Nexus
-      </Link>
     </div>
   )
 }

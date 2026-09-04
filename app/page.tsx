@@ -3,6 +3,7 @@ import Pagination from "@/components/Pagination"
 import ErrorMessage from "@/components/ErrorMessage"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { getLatestMangasCached } from "@/lib/cache"
+import { fromMangaDex } from "@/lib/adapters"
 import { Suspense } from "react"
 
 const LIMIT = 30
@@ -28,8 +29,8 @@ async function LatestGrid({ page }: { page: number }) {
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {mangas.map(manga => (
-          <MangaCard key={manga.id} manga={manga} />
+        {mangas.map((manga, i) => (
+          <MangaCard key={manga.id} manga={fromMangaDex(manga)} index={i} />
         ))}
       </div>
       <Pagination
