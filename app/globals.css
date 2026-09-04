@@ -1,23 +1,76 @@
 @import "tailwindcss";
 
+/* ============================================================
+   MANGA HUB BR — DESIGN SYSTEM (v2)
+   Dark-first, identidade roxa mantida (accent #6c5ce7)
+   Tokens completos: escala, semânticos, radius, sombras
+   ============================================================ */
+
 :root {
-  --background: #0f0f0f;
-  --foreground: #f5f5f5;
-  --muted: #a0a0a0;
+  /* Base */
+  --background: #0d0d0f;
+  --foreground: #f5f5f7;
+  --muted: #9a9aa3;
+  --muted-foreground: #b4b4bd;
+
+  /* Superfícies */
+  --card: #17171a;
+  --card-hover: #1e1e22;
+  --border: #26262b;
+  --border-strong: #33333a;
+
+  /* Accent (roxo — identidade do projeto) */
   --accent: #6c5ce7;
   --accent-hover: #7c6ff0;
-  --card: #1a1a1a;
-  --border: #2a2a2a;
+  --accent-soft: rgba(108, 92, 231, 0.12);
+  --accent-border: rgba(108, 92, 231, 0.35);
+
+  /* Semânticos */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #38bdf8;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows (tintadas com o fundo) */
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-accent: 0 4px 20px rgba(108, 92, 231, 0.18);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
-  --color-card: var(--card);
-  --color-border: var(--border);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-hover: var(--shadow-hover);
+  --shadow-accent: var(--shadow-accent);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -26,21 +79,91 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ============================================================
+   FOCUS VISIBLE — acessibilidade
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   SCROLLBAR (mantida, refinada)
+   ============================================================ */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
-
 ::-webkit-scrollbar-track {
   background: var(--background);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-strong);
   border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
+}
+
+/* ============================================================
+   UTILITÁRIOS DE COMPONENTE
+   ============================================================ */
+@utility card-surface {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+@utility accent-pill {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-full);
+}
+
+/* Micro-interação tátil em elementos interativos */
+@utility tactile {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.tactile:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* Entrada suave para grids (stagger por index) */
+@utility fade-in {
+  animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton shimmer refinado */
+@utility shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  animation: shimmer 1.8s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
