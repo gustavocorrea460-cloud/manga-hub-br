@@ -27,12 +27,15 @@ import type { Chapter } from "@/types/mangadex"
 import type { MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopChapter } from "@/types/mangastop"
 import type { LeituraMangaChapter } from "@/types/leiturmanga"
+import type { QueroLerChapter } from "@/types/queroler"
 import {
   getLeituraMangaCached,
   getLeituraMangaChaptersCached,
+  getQueroLerMangaCached,
+  getQueroLerChaptersCached,
 } from "@/lib/cache"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
 
 async function MangaDetailMangaDex({ mangaId }: { mangaId: string }) {
   let manga
@@ -498,6 +501,139 @@ async function ChaptersSectionLeituraManga({ mangaId }: { mangaId: string }) {
   )
 }
 
+async function MangaDetailQueroLer({ mangaId }: { mangaId: string }) {
+  let manga
+  try {
+    manga = await getQueroLerMangaCached(mangaId)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no QueroLer." />
+  }
+
+  return (
+    <>
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
+        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
+          {manga.coverUrl ? (
+            <Image
+              src={manga.coverUrl}
+              alt={manga.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 256px"
+              className="object-cover"
+              priority
+              unoptimized
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted text-sm">
+              Sem capa
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 min-w-0">
+          <h1 className="text-2xl font-bold">{manga.title}</h1>
+
+          {manga.altTitles && manga.altTitles.length > 0 && (
+            <p className="text-sm text-muted">{manga.altTitles.join(", ")}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {manga.status && (
+              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
+                {manga.status}
+              </span>
+            )}
+            {manga.year && (
+              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
+                {manga.year}
+              </span>
+            )}
+          </div>
+
+          {manga.author && (
+            <p className="text-sm text-muted">
+              Autor: <span className="text-foreground">{manga.author}</span>
+            </p>
+          )}
+
+          {manga.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {manga.genres.map(g => (
+                <span
+                  key={g}
+                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {manga.description && (
+            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
+              {manga.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Capítulos</h2>
+          <SourceBadge source="queroler" />
+        </div>
+        <Suspense fallback={<ChapterListSkeleton />}>
+          <ChaptersSectionQueroLer mangaId={mangaId} />
+        </Suspense>
+      </section>
+    </>
+  )
+}
+
+async function ChaptersSectionQueroLer({ mangaId }: { mangaId: string }) {
+  let chapters: QueroLerChapter[]
+  try {
+    chapters = await getQueroLerChaptersCached(mangaId)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar os capítulos." />
+  }
+
+  if (chapters.length === 0) {
+    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
+  }
+
+  return (
+    <div className="space-y-1">
+      {chapters.map(ch => (
+        <a
+          key={ch.id}
+          href={`https://queroler.com${ch.pdfUrl}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-sm font-medium text-foreground shrink-0">
+              Cap. {ch.number}
+            </span>
+            {ch.title && (
+              <span className="text-sm text-muted truncate">{ch.title}</span>
+            )}
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">
+              PDF
+            </span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </a>
+      ))}
+    </div>
+  )
+}
+
 async function ChaptersSectionMangaStop({ mangaId }: { mangaId: string }) {
   let chapters: MangaStopChapter[]
   try {
@@ -545,7 +681,7 @@ export default async function MangaPage({
   searchParams: Promise<{ source?: string }>
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : "mangadex"
+  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : "mangadex"
 
   if (!slug) notFound()
 
@@ -555,7 +691,9 @@ export default async function MangaPage({
       ? MangaDetailMangaStop
       : source === "leiturmanga"
         ? MangaDetailLeituraManga
-        : MangaDetailMangaDex
+        : source === "queroler"
+          ? MangaDetailQueroLer
+          : MangaDetailMangaDex
 
   return (
     <Suspense fallback={<MangaDetailSkeleton />}>

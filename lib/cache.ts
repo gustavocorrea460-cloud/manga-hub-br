@@ -20,6 +20,8 @@ import type { Manga, Chapter, Tag } from "@/types/mangadex"
 import type { MangaFireSearchResponse, MangaFireManga, MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopSearchResult, MangaStopManga, MangaStopChapter } from "@/types/mangastop"
 import type { LeituraMangaSearchResult, LeituraMangaManga, LeituraMangaChapter } from "@/types/leiturmanga"
+import type { QueroLerManga, QueroLerChapter } from "@/types/queroler"
+import * as queroler from "@/lib/api/queroler"
 
 const CACHE_TTL_MINUTES = 30
 
@@ -292,6 +294,36 @@ export async function getLeituraMangaPagesCached(
     `llm:pages:${slug}:${num}`,
     `llm:${slug}`,
     () => leiturmanga.getChapterImages(slug, num),
+  )
+}
+
+// ─── QueroLer Cached ─────────────────────────────────────────
+
+export async function searchQueroLerCached(
+  query: string,
+): Promise<{ id: string; title: string; coverUrl: string | null; author: string | null }[]> {
+  return withMangaCache(
+    `ql:search:${query.toLowerCase().trim()}`,
+    () => queroler.searchManga(query),
+  )
+}
+
+export async function getQueroLerMangaCached(
+  uuid: string,
+): Promise<QueroLerManga> {
+  return withMangaCache(
+    `ql:manga:${uuid}`,
+    () => queroler.getManga(uuid),
+  )
+}
+
+export async function getQueroLerChaptersCached(
+  uuid: string,
+): Promise<QueroLerChapter[]> {
+  return withChapterCache(
+    `ql:chapters:${uuid}`,
+    `ql:${uuid}`,
+    () => queroler.getChapters(uuid),
   )
 }
 

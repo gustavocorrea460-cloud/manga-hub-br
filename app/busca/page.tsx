@@ -12,10 +12,11 @@ import { searchMangaWithFilters } from "@/lib/api/mangadex"
 import { getTagsCached, searchMangaFireCached, searchMangaStopCached } from "@/lib/cache"
 import SourceBadge from "@/components/SourceBadge"
 import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/mangadex"
+import { searchQueroLerCached } from "@/lib/cache"
 
 const LIMIT = 30
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
 
 function parseFilters(
   params: Awaited<SearchParamsType>,
@@ -38,7 +39,7 @@ function parseFilters(
     includedTags: includedTags && includedTags.length > 0 ? includedTags : undefined,
     excludedTags: excludedTags && excludedTags.length > 0 ? excludedTags : undefined,
     page: Math.max(1, Number(params.page) || 1),
-    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : "mangadex",
+    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : "mangadex",
   }
 }
 
@@ -66,6 +67,10 @@ async function SearchResults({ filters }: { filters: ReturnType<typeof parseFilt
 
   if (source === "leiturmanga") {
     return <MangaFireResults query={filters.q || ""} page={filters.page} />
+  }
+
+  if (source === "queroler") {
+    return <QueroLerResults query={filters.q || ""} />
   }
 
   let result
@@ -274,6 +279,70 @@ async function MangaStopResults({ query }: { query: string }) {
   )
 }
 
+async function QueroLerResults({ query }: { query: string }) {
+  if (!query) {
+    return <EmptyState title="Digite um termo para buscar no QueroLer" />
+  }
+
+  let results
+  try {
+    results = await searchQueroLerCached(query)
+  } catch {
+    return <ErrorMessage message="Erro ao buscar no QueroLer. Tente novamente." />
+  }
+
+  if (results.length === 0) {
+    return <EmptyState title={`Nenhum resultado para "${query}" no QueroLer`} />
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">
+        {results.length} resultado{results.length !== 1 ? "s" : ""}
+        {query ? ` para "${query}"` : ""}
+        {" "}— Fonte: <span className="text-accent font-medium">QueroLer</span>
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {results.map(r => (
+          <Link
+            key={r.id}
+            href={`/manga/${r.id}?source=queroler`}
+            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
+          >
+            <div className="relative aspect-[3/4] overflow-hidden bg-card">
+              {r.coverUrl ? (
+                <Image
+                  src={r.coverUrl}
+                  alt={r.title || ""}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 16vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted text-xs">
+                  Sem capa
+                </div>
+              )}
+              <div className="absolute top-1.5 left-1.5">
+                <SourceBadge source="queroler" size="xs" />
+              </div>
+            </div>
+            <div className="px-2 pb-2">
+              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
+                {r.title}
+              </h3>
+              {r.author && (
+                <span className="text-[10px] text-muted mt-0.5 block">{r.author}</span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 async function FiltersSection() {
   const tags = await getTagsCached()
   return <SearchFilters tags={tags} />
@@ -286,7 +355,7 @@ export default async function BuscaPage({
 }) {
   const params = await searchParams
   const filters = parseFilters(params)
-  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : "mangadex"
+  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : "mangadex"
 
   return (
     <div className="space-y-6">
@@ -358,6 +427,16 @@ function SourceToggle({ current, query }: { current: string; query?: string }) {
         }`}
       >
         LeituraManga
+      </Link>
+      <Link
+        href={`${baseUrl}&source=queroler`}
+        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+          current === "queroler"
+            ? "bg-accent text-white"
+            : "bg-card border border-border text-muted hover:text-foreground"
+        }`}
+      >
+        QueroLer
       </Link>
     </div>
   )

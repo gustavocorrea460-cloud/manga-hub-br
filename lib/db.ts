@@ -170,6 +170,29 @@ export async function getCatalogEntries(
   }
 }
 
+export async function findMangaByTitle(
+  title: string,
+  excludeSource?: string,
+): Promise<CatalogEntryRow[]> {
+  const sql = getSql()
+  const normalized = title.toLowerCase().trim()
+  const rows = excludeSource
+    ? await sql`
+        SELECT * FROM manga_catalog
+        WHERE LOWER(title) LIKE ${`%${normalized}%`}
+          AND source != ${excludeSource}
+        ORDER BY source, title ASC
+        LIMIT 10
+      `
+    : await sql`
+        SELECT * FROM manga_catalog
+        WHERE LOWER(title) LIKE ${`%${normalized}%`}
+        ORDER BY source, title ASC
+        LIMIT 10
+      `
+  return rows as unknown as CatalogEntryRow[]
+}
+
 export async function deleteExpiredCache(hours: number = 24): Promise<void> {
   const sql = getSql()
   await sql`DELETE FROM manga_cache WHERE updated_at < NOW() - INTERVAL '1 hour' * ${hours}`

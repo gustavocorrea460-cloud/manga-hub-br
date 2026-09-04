@@ -21,7 +21,7 @@ import {
   getLeituraMangaChaptersCached,
 } from "@/lib/cache"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
 
 async function getPrevNextMangaDex(
   chapters: Chapter[],
@@ -107,6 +107,10 @@ async function ReaderContent({
 
   if (source === "leiturmanga") {
     return <LeituraMangaReader chapterId={chapterId} mangaId={mangaId} />
+  }
+
+  if (source === "queroler") {
+    return <QueroLerReader chapterId={chapterId} mangaId={mangaId} />
   }
 
   let pagesData
@@ -231,6 +235,32 @@ async function LeituraMangaReader({
   )
 }
 
+async function QueroLerReader({
+  chapterId,
+  mangaId,
+}: {
+  chapterId: string
+  mangaId?: string
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4">
+      <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <polyline points="15 3 21 3 21 9" />
+          <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
+      </div>
+      <p className="text-muted text-center max-w-md">
+        O QueroLer disponibiliza mangás apenas em formato <strong>PDF</strong> para download.
+      </p>
+      <p className="text-sm text-muted text-center max-w-md">
+        Para ler online, utilize outro agregador compatível com este mangá.
+      </p>
+    </div>
+  )
+}
+
 async function MangaFireReader({
   chapterId,
   mangaId,
@@ -279,7 +309,7 @@ export default async function ReaderPage({
   searchParams: Promise<{ mangaId?: string; source?: string }>
 }) {
   const [{ chapterId }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : "mangadex"
+  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : "mangadex"
   const { mangaId } = sp
 
   if (!chapterId) notFound()

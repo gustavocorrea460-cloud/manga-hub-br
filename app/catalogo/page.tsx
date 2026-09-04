@@ -9,7 +9,7 @@ import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { getCatalogEntries } from "@/lib/db"
 
 const LIMIT = 30
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
 
 async function CatalogGrid({
   source,
