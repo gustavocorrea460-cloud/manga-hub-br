@@ -10,11 +10,12 @@ Sempre que iniciar uma sessão nova (sem histórico), execute nesta ordem:
 
 ```markdown
 1. LEIA `AGENTS.md`   ← este arquivo (boot, breaking changes, convenções)
-2. LEIA `MEMORY.md`   ← arquitetura, schema, decisões, roadmap
-3. LEIA `SESSIONS.md` ← últimas ações, próximo passo, blockers
-4. LEIA `.env.example` ← variáveis de ambiente necessárias
-5. EXECUTE `git status`         ← saber estado do working tree
-6. EXECUTE `npm run build`      ← verificar se compila
+2. LEIA `TIMELINE.md` ← cache quente da sessão atual (onde paramos, próximo passo)
+3. LEIA `MEMORY.md`   ← arquitetura, schema, decisões, roadmap
+4. LEIA `SESSIONS.md` ← últimas ações, próximo passo, blockers
+5. LEIA `.env.example` ← variáveis de ambiente necessárias
+6. EXECUTE `git status`         ← saber estado do working tree
+7. EXECUTE `npm run build`      ← verificar se compila
 ```
 
 ## 2. Auto-Sumário Obrigatório
@@ -65,6 +66,7 @@ Antes de qualquer ação, verifique:
 <!-- PROJETO — REFERÊNCIAS RÁPIDAS                                        -->
 <!-- ====================================================================== -->
 
+> 📌 **Cache quente da sessão:** `TIMELINE.md` (sessão atual, pilha, progresso, próximo passo)
 > 📌 **Contexto completo do projeto:** `MEMORY.md` (arquitetura, fontes, schema, roadmap, decisões)
 > 📌 **Log de sessões:** `SESSIONS.md` (histórico append-only de cada sessão)
 
