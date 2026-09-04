@@ -94,6 +94,12 @@ import { useState } from "react"
 // API RETURN: getLatestMangas/searchManga → { data: Manga[], total: number }
 // LEITOR: mangaId passado como ?mangaId= no search param
 // MULTI-SOURCE: parâmetro ?source=mangadex|mangafire|mangastop nas páginas
+// REGISTRY: lib/api/registry.ts — fonte única de metadados das fontes (id, label, cor, status, cachePrefix)
+// ENDPOINTS DE DIAGNÓSTICO:
+//   GET /api/sources — descobre fontes disponíveis (padrão comick-source-api)
+//   GET /api/health — health check por fonte (?source=X para uma só)
+//   /api/health detectou QueroLer DOWN (2026-09-04) → status: "down" no registry
+//   QueroLer removido do searchAllSources (código mantido p/ reativação)
 ```
 
 ## 📦 Comandos Úteis

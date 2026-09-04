@@ -4,7 +4,6 @@ import {
   searchMangaFireCached,
   searchMangaStopCached,
   searchLeituraMangaCached,
-  searchQueroLerCached,
   getMangaFireCached,
   getMangaStopCached,
   getLeituraMangaCached,
@@ -55,7 +54,7 @@ export async function searchAllSources(
   query: string,
   page: number = 1,
 ): Promise<{ data: FallbackSearchResult[]; total: number }> {
-  const [md, mf, ms, llm, ql] = await Promise.allSettled([
+  const [md, mf, ms, llm] = await Promise.allSettled([
     searchMangaWithFilters({ q: query, page, limit: 30 }).then(r =>
       r.data.map(m => {
         const title =
@@ -105,15 +104,7 @@ export async function searchAllSources(
         source: "leiturmanga" as SourceId,
       })),
     ),
-    searchQueroLerCached(query).then(r =>
-      r.map(r => ({
-        id: r.id,
-        title: r.title,
-        coverUrl: r.coverUrl,
-        type: null,
-        source: "queroler" as SourceId,
-      })),
-    ),
+    // QueroLer removido do searchAllSources (down desde 2026-09-04 — ver discovery)
   ])
 
   const allResults: FallbackSearchResult[] = []
@@ -121,7 +112,6 @@ export async function searchAllSources(
   if (mf.status === "fulfilled") allResults.push(...mf.value)
   if (ms.status === "fulfilled") allResults.push(...ms.value)
   if (llm.status === "fulfilled") allResults.push(...llm.value)
-  if (ql.status === "fulfilled") allResults.push(...ql.value)
 
   const deduplicated = deduplicateResults(allResults)
   return { data: deduplicated, total: deduplicated.length }

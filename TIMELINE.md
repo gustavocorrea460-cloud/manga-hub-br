@@ -11,21 +11,22 @@
 ## Sessão atual
 
 - **Início:** 2026-06-01
-- **Sessão nº:** 21
-- **Tarefa em andamento:** Fase 3 — estrutura de resiliência (TIMELINE.md + discoveries/)
+- **Sessão nº:** 22
+- **Tarefa em andamento:** 🔴 Análise de fontes + pesquisa de projetos para evoluir o app
 - **Fase do projeto:** 2.5 — Fontes Alternativas (5 fontes integradas) ✅
 
 ## Pilha
 
-1. 🔴 **Fase 3** — TIMELINE.md + `docs/archive/discoveries/` + propagação de decisões já feita
-2. ⏸️ Testar QueroLer em produção (`/busca?source=queroler&q=one+piece`)
-3. ⏸️ Revogar token antigo `ghp_7wbOgl...` (ação do USUÁRIO)
-4. ⏸️ MangaPlus (oficial Shueisha) como próxima fonte
+1. 🔴 **Análise de fontes** — nexustoons.com + mangastop.net: estrutura, de onde pegam dados
+2. 🔴 **Pesquisa de projetos** — open-source de manga apps, extrair melhores práticas
+3. ⏸️ Testar QueroLer em produção (`/busca?source=queroler&q=one+piece`)
+4. ⏸️ Revogar token antigo `ghp_7wbOgl...` (ação do USUÁRIO)
+5. ⏸️ MangaPlus (oficial Shueisha) como próxima fonte
 
 ## Progresso
 
-- **Último passo:** Fase 3 completa — TIMELINE.md criado, 4 discovery files, AGENTS.md atualizado, commit `8856f33` pushado
-- **Próximo passo:** Reinício do projeto (Fase 3 de docs finalizada) — pendências: testar QueroLer em produção, revogar token antigo, considerar MangaPlus
+- **Último passo:** Implementados `/api/sources` + `/api/health` (registry) — health detectou QueroLer DOWN → removido do fallback chain. Discovery file criado.
+- **Próximo passo:** Commit da implementação + docs (SESSIONS.md), depois push
 
 ## 📋 ÍNDICE
 
@@ -39,6 +40,8 @@
 | `docs/archive/discoveries/2026-05-24-queroler-rate-limit.md` | QueroLer: rate limit + adblock detection |
 | `docs/archive/discoveries/2026-05-24-leiturmanga-nextjs-ssr.md` | LeituraManga: Next.js SSR sem API |
 | `docs/archive/discoveries/2026-06-01-github-token-remote-leak.md` | Segurança: token Git na URL do remote |
+| `docs/archive/discoveries/2026-09-04-nexustoons-structure.md` | Nexus: estrutura SPA + OrionCrypto reversed |
+| `docs/archive/discoveries/2026-09-04-queroler-down.md` | QueroLer.com caído (404) — ação tomada |
 
 ## Histórico (últimas 5)
 

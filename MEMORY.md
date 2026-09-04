@@ -28,7 +28,7 @@
 - Detalhes do mangá (capa, status, tags, autor, descrição, scanlators, source badge)
 - Leitor com: teclado (← → Espaço), clique lateral, navegação entre caps, Data Saver, scanlator visível, modo webtoon
 - Busca por texto com paginação + filtros avançados (`?q=&page=&status=&year=`)
-- **5 fontes**: MangaDex, MangaFire, MangaStop.net, LeituraManga.net, QueroLer.com
+- **5 fontes**: MangaDex, MangaFire, MangaStop.net, LeituraManga.net (✅ ativas) + QueroLer.com (⚠️ down desde 2026-09-04)
 - **Source toggle** na busca com fallback chain automática
 - **Image proxy** `/api/proxy?url=` para bypass de CORS/hotlink
 - **Catálogo** `/catalogo` com grid, paginação e filtro por fonte
@@ -175,7 +175,7 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Telegram:** ativo com notificações de novos capítulos
 - **Acervo:** milhares de títulos PT-BR
 
-### Fallback BR complementar: QueroLer.com (fase 2.5) ✅ IMPLEMENTADO
+### Fallback BR complementar: QueroLer.com (fase 2.5) ⚠️ DOWN desde 2026-09-04
 - **Site:** https://queroler.com — Next.js SSR, busca por query param
 - **Abordagem:** Scraping TS + cheerio (Next.js SSR, HTML estruturado)
 - **Acervo:** menor (~63 caps por manga), PDF-only (sem reader online)
@@ -187,7 +187,8 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Adblock detection:** Bloqueia conteúdo se scripts de tracking não carregarem — detecção por keywords no HTML + retry 1x
 - **Rate limiting:** 800ms mínimo entre requests para evitar bloqueio
 - **Cache:** `ql:*` prefix no PostgreSQL (TTL 30min)
-- **Fallback chain:** Incluído em `searchAllSources` e `findAlternativesForReader` (ignorado para leitura — PDF-only)
+- **Status 2026-09-04:** ❌ **DOWN** — retorna 404 em todos os endpoints (raiz, busca, www, .br). Removido do `searchAllSources` (health check detectou). Código mantido para reativação futura. Ver discovery `2026-09-04-queroler-down.md`
+- **Fallback chain:** ⚠️ Removido de `searchAllSources` — mantido no registry com marcação down
 
 ### Outros agregadores considerados (status)
 | Fonte | Status | Motivo |
