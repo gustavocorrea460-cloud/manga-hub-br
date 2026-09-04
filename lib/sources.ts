@@ -16,6 +16,10 @@ import {
   searchQueroLerCached,
   getQueroLerMangaCached,
   getQueroLerChaptersCached,
+  searchNexusCached,
+  getNexusMangaCached,
+  getNexusChaptersCached,
+  getNexusPagesCached,
 } from "@/lib/cache"
 import * as mangafire from "@/lib/api/mangafire"
 import type { Manga } from "@/types/mangadex"
@@ -23,8 +27,9 @@ import type { MangaFireSearchResult, MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopSearchResult, MangaStopChapter } from "@/types/mangastop"
 import type { LeituraMangaSearchResult, LeituraMangaChapter } from "@/types/leiturmanga"
 import type { QueroLerManga, QueroLerChapter } from "@/types/queroler"
+import type { NexusManga } from "@/types/nexustoons"
 
-export type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
+export type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
 
 export interface UnifiedSearchResult {
   id: string
@@ -99,6 +104,21 @@ async function searchQueroLer(
   return { data, total: data.length }
 }
 
+async function searchNexus(
+  query: string,
+  page: number,
+): Promise<{ data: UnifiedSearchResult[]; total: number }> {
+  const result = await searchNexusCached(query, page)
+  const data = (result.data || []).map((m: NexusManga) => ({
+    id: m.slug || String(m.id),
+    title: m.title || "Sem título",
+    coverUrl: m.coverImage,
+    type: m.type,
+    source: "nexustoons" as SourceId,
+  }))
+  return { data, total: result.total }
+}
+
 async function searchMangaDex(
   query: string,
   page: number,
@@ -137,6 +157,7 @@ export async function searchSource(
   if (source === "mangastop") return searchMangaStop(query, page)
   if (source === "leiturmanga") return searchLeituraManga(query, page)
   if (source === "queroler") return searchQueroLer(query, page)
+  if (source === "nexustoons") return searchNexus(query, page)
   return searchMangaDex(query, page)
 }
 
@@ -200,6 +221,21 @@ async function getMangaQueroLer(id: string): Promise<UnifiedManga> {
   }
 }
 
+async function getMangaNexus(id: string): Promise<UnifiedManga> {
+  const m = await getNexusMangaCached(id)
+  return {
+    id,
+    title: m.title || "Sem título",
+    description: m.description || "",
+    coverUrl: m.coverImage,
+    status: m.status || "",
+    author: m.author || null,
+    year: m.releaseYear?.toString() || null,
+    genres: (m.categories || []).map(c => c.name),
+    source: "nexustoons",
+  }
+}
+
 async function getMangaMangaDex(id: string): Promise<UnifiedManga> {
   const m = await getManga(id)
   const title =
@@ -242,6 +278,7 @@ export async function getMangaSource(
   if (source === "mangastop") return getMangaMangaStop(id)
   if (source === "leiturmanga") return getMangaLeituraManga(id)
   if (source === "queroler") return getMangaQueroLer(id)
+  if (source === "nexustoons") return getMangaNexus(id)
   return getMangaMangaDex(id)
 }
 
@@ -285,6 +322,15 @@ export async function getChaptersSource(
       date: c.date,
     }))
   }
+  if (source === "nexustoons") {
+    const chapters = await getNexusChaptersCached(mangaId)
+    return chapters.map((c) => ({
+      number: c.number,
+      id: String(c.id),
+      title: c.title,
+      date: c.createdAt || null,
+    }))
+  }
   const chapters = await getChapters(mangaId)
   return chapters.map(c => ({
     number: c.attributes.chapter || "0",
@@ -313,6 +359,10 @@ export async function getChapterPagesSource(
   if (source === "queroler") {
     return { pages: [], baseUrl: null }
   }
+  if (source === "nexustoons") {
+    const images = await getNexusPagesCached(chapterId)
+    return { pages: images.map(p => p.imageUrl), baseUrl: null }
+  }
   const data = await getChapterPagesCached(chapterId)
   return { pages: data.dataSaver, baseUrl: data.baseUrl }
 }
@@ -324,6 +374,7 @@ export function getSourceLabel(source: SourceId): string {
     mangastop: "MangaStop",
     leiturmanga: "LeituraManga",
     queroler: "QueroLer",
+    nexustoons: "Nexus",
   }
   return labels[source] || source
 }

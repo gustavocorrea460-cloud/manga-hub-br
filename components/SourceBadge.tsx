@@ -1,4 +1,4 @@
-export type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
+export type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
 
 interface Props {
   source: SourceId
@@ -11,6 +11,7 @@ const labels: Record<SourceId, string> = {
   mangastop: "MangaStop",
   leiturmanga: "LeituraManga",
   queroler: "QueroLer",
+  nexustoons: "Nexus",
 }
 
 const colors: Record<SourceId, string> = {
@@ -19,6 +20,7 @@ const colors: Record<SourceId, string> = {
   mangastop: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   leiturmanga: "bg-pink-500/15 text-pink-400 border-pink-500/30",
   queroler: "bg-violet-500/15 text-violet-400 border-violet-500/30",
+  nexustoons: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
 }
 
 export default function SourceBadge({ source, size = "sm" }: Props) {

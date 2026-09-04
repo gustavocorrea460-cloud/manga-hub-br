@@ -8,6 +8,8 @@ import {
   getMangaFireChaptersCached,
   getMangaStopPagesCached,
   getMangaStopChaptersCached,
+  getNexusPagesCached,
+  getNexusChaptersCached,
 } from "@/lib/cache"
 import SourceBadge from "@/components/SourceBadge"
 import { getScanlatorName } from "@/types/mangadex"
@@ -21,7 +23,7 @@ import {
   getLeituraMangaChaptersCached,
 } from "@/lib/cache"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
 
 async function getPrevNextMangaDex(
   chapters: Chapter[],
@@ -111,6 +113,10 @@ async function ReaderContent({
 
   if (source === "queroler") {
     return <QueroLerReader chapterId={chapterId} mangaId={mangaId} />
+  }
+
+  if (source === "nexustoons") {
+    return <NexusReader chapterId={chapterId} mangaId={mangaId} />
   }
 
   let pagesData
@@ -261,6 +267,63 @@ async function QueroLerReader({
   )
 }
 
+async function NexusReader({
+  chapterId,
+  mangaId,
+}: {
+  chapterId: string
+  mangaId?: string
+}) {
+  let images: string[]
+  try {
+    const pages = await getNexusPagesCached(chapterId)
+    images = pages.map(p => p.imageUrl)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no Nexus." />
+  }
+
+  let prevNext = { prevId: null as string | null, nextId: null as string | null }
+
+  if (mangaId) {
+    try {
+      const chapters = await getNexusChaptersCached(mangaId)
+      prevNext = await getPrevNextNexus(chapters, chapterId)
+    } catch {
+      // non-critical
+    }
+  }
+
+  return (
+    <Reader
+      pages={images}
+      baseUrl=""
+      hash=""
+      chapterId={chapterId}
+      mangaId={mangaId || ""}
+      useDataSaver={false}
+      prevChapterId={prevNext.prevId}
+      nextChapterId={prevNext.nextId}
+      absoluteUrls
+    />
+  )
+}
+
+async function getPrevNextNexus(
+  chapters: { id: number; number: string }[],
+  currentId: string,
+): Promise<{ prevId: string | null; nextId: string | null }> {
+  const sorted = [...chapters].sort((a, b) => {
+    const an = parseFloat(a.number || "0")
+    const bn = parseFloat(b.number || "0")
+    return bn - an
+  })
+  const idx = sorted.findIndex(c => String(c.id) === currentId)
+  return {
+    prevId: idx < sorted.length - 1 ? String(sorted[idx + 1].id) : null,
+    nextId: idx > 0 ? String(sorted[idx - 1].id) : null,
+  }
+}
+
 async function MangaFireReader({
   chapterId,
   mangaId,
@@ -309,7 +372,7 @@ export default async function ReaderPage({
   searchParams: Promise<{ mangaId?: string; source?: string }>
 }) {
   const [{ chapterId }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : "mangadex"
+  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : sp.source === "nexustoons" ? "nexustoons" : "mangadex"
   const { mangaId } = sp
 
   if (!chapterId) notFound()

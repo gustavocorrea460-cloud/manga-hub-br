@@ -25,8 +25,8 @@
 
 ## Progresso
 
-- **Último passo:** Implementados `/api/sources` + `/api/health` (registry) — health detectou QueroLer DOWN → removido do fallback chain. Discovery file criado.
-- **Próximo passo:** Commit da implementação + docs (SESSIONS.md), depois push
+- **Último passo:** Integração NexusToons COMPLETA (6ª fonte): orion.ts (OrionCrypto) + nexustoons.ts + cache nx:* + adapter + UI (busca/detalhe/leitor) — build ✅, testes ✅
+- **Próximo passo:** Commit da integração Nexus + push
 
 ## 📋 ÍNDICE
 

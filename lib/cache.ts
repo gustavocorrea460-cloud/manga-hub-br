@@ -22,6 +22,13 @@ import type { MangaStopSearchResult, MangaStopManga, MangaStopChapter } from "@/
 import type { LeituraMangaSearchResult, LeituraMangaManga, LeituraMangaChapter } from "@/types/leiturmanga"
 import type { QueroLerManga, QueroLerChapter } from "@/types/queroler"
 import * as queroler from "@/lib/api/queroler"
+import * as nexus from "@/lib/api/nexustoons"
+import type {
+  NexusManga,
+  NexusChapter,
+  NexusPage,
+  NexusMangaDetailResponse,
+} from "@/types/nexustoons"
 
 const CACHE_TTL_MINUTES = 30
 
@@ -324,6 +331,40 @@ export async function getQueroLerChaptersCached(
     `ql:chapters:${uuid}`,
     `ql:${uuid}`,
     () => queroler.getChapters(uuid),
+  )
+}
+
+// ─── NexusToons Cached ─────────────────────────────────────────
+
+export async function searchNexusCached(
+  query: string,
+  page: number = 1,
+): Promise<{ data: NexusManga[]; total: number }> {
+  return withMangaCache(
+    `nx:search:${query.toLowerCase().trim()}:${page}`,
+    () => nexus.searchManga(query, page),
+  )
+}
+
+export async function getNexusMangaCached(slug: string): Promise<NexusMangaDetailResponse> {
+  return withMangaCache(
+    `nx:manga:${slug}`,
+    () => nexus.getManga(slug),
+  )
+}
+
+export async function getNexusChaptersCached(slug: string): Promise<NexusChapter[]> {
+  return withChapterCache(
+    `nx:chapters:${slug}`,
+    `nx:${slug}`,
+    () => nexus.getManga(slug).then(d => nexus.extractChapters(d)),
+  )
+}
+
+export async function getNexusPagesCached(chapterId: number | string): Promise<NexusPage[]> {
+  return withMangaCache(
+    `nx:pages:${chapterId}`,
+    () => nexus.getChapterPages(chapterId),
   )
 }
 

@@ -28,7 +28,8 @@
 - Detalhes do mangá (capa, status, tags, autor, descrição, scanlators, source badge)
 - Leitor com: teclado (← → Espaço), clique lateral, navegação entre caps, Data Saver, scanlator visível, modo webtoon
 - Busca por texto com paginação + filtros avançados (`?q=&page=&status=&year=`)
-- **5 fontes**: MangaDex, MangaFire, MangaStop.net, LeituraManga.net (✅ ativas) + QueroLer.com (⚠️ down desde 2026-09-04)
+- **6 fontes**: MangaDex, MangaFire, MangaStop.net, LeituraManga.net, NexusToons (✅ ativas, desde 2026-09-04) + QueroLer.com (⚠️ down desde 2026-09-04)
+- **Integração Nexus** (2026-09-04): API criptografada OrionCrypto REVERSED — `lib/api/orion.ts` + `lib/api/nexustoons.ts`, cache `nx:*`, 13.5k+ títulos PT-BR
 - **Source toggle** na busca com fallback chain automática
 - **Image proxy** `/api/proxy?url=` para bypass de CORS/hotlink
 - **Catálogo** `/catalogo` com grid, paginação e filtro por fonte
@@ -175,8 +176,7 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Telegram:** ativo com notificações de novos capítulos
 - **Acervo:** milhares de títulos PT-BR
 
-### Fallback BR complementar: QueroLer.com (fase 2.5) ⚠️ DOWN desde 2026-09-04
-- **Site:** https://queroler.com — Next.js SSR, busca por query param
+### Fallback BR complementar: QueroLer.com (fase 2.5) ⚠️ DOWN desde 2026-09-04- **Site:** https://queroler.com — Next.js SSR, busca por query param
 - **Abordagem:** Scraping TS + cheerio (Next.js SSR, HTML estruturado)
 - **Acervo:** menor (~63 caps por manga), PDF-only (sem reader online)
 - **Busca:** SSR via `GET /manga/?query={term}` — parse de `div.manga-card` com UUID, título, capa, autor
@@ -189,6 +189,21 @@ Formato: https://uploads.mangadex.org/covers/{manga-id}/{cover-filename}.256.jpg
 - **Cache:** `ql:*` prefix no PostgreSQL (TTL 30min)
 - **Status 2026-09-04:** ❌ **DOWN** — retorna 404 em todos os endpoints (raiz, busca, www, .br). Removido do `searchAllSources` (health check detectou). Código mantido para reativação futura. Ver discovery `2026-09-04-queroler-down.md`
 - **Fallback chain:** ⚠️ Removido de `searchAllSources` — mantido no registry com marcação down
+
+### Fallback PT-BR massivo: NexusToons.com (2026-09-04) ✅ INTEGRADO
+- **Site:** https://nexustoons.com — SPA React + Vite + PWA, backend Express + Cloudflare
+- **Abordagem:** API própria self-hosted (não é scraping HTML!) — endpoints JSON públicos
+- **Acervo:** **13.5k+ títulos PT-BR** (manhua/manhwa/manga, conteúdo massivo)
+- **Busca:** `GET /api/mangas?q={term}&limit=24&page=N` — SEM criptografia, paginada ({data, total})
+- **Detalhes:** `GET /api/manga/{slug}` — CRIPTOGRAFADO ({d,k,v})
+- **Capítulos:** dentro do payload de detalhes (criptografado) — id, number, title, views
+- **Páginas:** `GET /api/read/{id}` — CRIPTOGRAFADO → `pages[{imageUrl, pageNumber}]`
+- **Criptografia:** **OrionCrypto REVERSED** (lib/api/orion.ts) — RC4-like com 5 chaves SHA-256 derivadas, secret `OrionNexus2025CryptoKey!Secure`. Documentação completa no discovery `2026-09-04-nexustoons-structure.md`
+- **CDN:** `img.nx-toons.xyz` — `covers/{id}.png` / `manga_pages/{mangaId}/{hash}_{num}/{page}.webp` — SEM hotlink protection
+- **Metadata rica:** rating, views, publisher, studio, muRating (MangaUpdates), categories (genre|theme), isVipOnly
+- **Cache:** `nx:*` prefix no PostgreSQL (TTL 30min)
+- **Fallback chain:** Adicionado como fonte de busca/leitura (source=nexustoons)
+- **⚠️ Legal:** Reversão de criptografia feita para análise. Se o projeto for monetizado/público, reavaliar ToS/DMCA
 
 ### Outros agregadores considerados (status)
 | Fonte | Status | Motivo |
@@ -319,8 +334,11 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   │   ├── mangastop.ts           # Scraper MangaStop.net (cheerio, _ts_internal_config)
 │   │   ├── leiturmanga.ts         # Scraper LeituraManga.net (cheerio, Next.js SSR)
 │   │   ├── queroler.ts            # Scraper QueroLer.com (cheerio, SSR, PDF-only)
+│   │   ├── nexustoons.ts          # Cliente NexusToons (API criptografada, 13.5k+ títulos)
+│   │   ├── orion.ts               # OrionCrypto — reversão da criptografia Nexus (documentada)
+│   │   ├── registry.ts            # Registry central de fontes (id, label, cor, status)
 │   │   └── sitemap.ts             # Parser de sitemaps XML (MangaStop + LeituraManga)
-│   ├── cache.ts                   # Cache layer (banco, TTL 30min)
+│   ├── cache.ts                   # Cache layer (banco, TTL 30min, prefixos md/mf/ms/llm/ql/nx)
 │   ├── db.ts                      # Conexão com banco (lazy init)
 │   ├── source-fallback.ts         # Cross-source fallback chain (search, dedup, equivalent manga/chapter)
 │   ├── sources.ts                 # Unified adapter multi-source

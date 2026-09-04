@@ -9,14 +9,15 @@ import ErrorMessage from "@/components/ErrorMessage"
 import EmptyState from "@/components/EmptyState"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { searchMangaWithFilters } from "@/lib/api/mangadex"
-import { getTagsCached, searchMangaFireCached, searchMangaStopCached } from "@/lib/cache"
+import { getTagsCached, searchMangaFireCached, searchMangaStopCached, searchNexusCached } from "@/lib/cache"
 import SourceBadge from "@/components/SourceBadge"
 import type { SearchFilters as SearchFiltersType, FilterOrder } from "@/types/mangadex"
 import { searchQueroLerCached } from "@/lib/cache"
+import type { NexusManga } from "@/types/nexustoons"
 
 const LIMIT = 30
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
 
 function parseFilters(
   params: Awaited<SearchParamsType>,
@@ -39,7 +40,7 @@ function parseFilters(
     includedTags: includedTags && includedTags.length > 0 ? includedTags : undefined,
     excludedTags: excludedTags && excludedTags.length > 0 ? excludedTags : undefined,
     page: Math.max(1, Number(params.page) || 1),
-    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : "mangadex",
+    source: params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : params.source === "nexustoons" ? "nexustoons" : "mangadex",
   }
 }
 
@@ -71,6 +72,10 @@ async function SearchResults({ filters }: { filters: ReturnType<typeof parseFilt
 
   if (source === "queroler") {
     return <QueroLerResults query={filters.q || ""} />
+  }
+
+  if (source === "nexustoons") {
+    return <NexusResults query={filters.q || ""} page={filters.page} />
   }
 
   let result
@@ -343,6 +348,77 @@ async function QueroLerResults({ query }: { query: string }) {
   )
 }
 
+async function NexusResults({ query, page }: { query: string; page: number }) {
+  if (!query) {
+    return <EmptyState title="Digite um termo para buscar no Nexus" />
+  }
+
+  let result
+  try {
+    result = await searchNexusCached(query, page)
+  } catch {
+    return <ErrorMessage message="Erro ao buscar no Nexus. Tente novamente em instantes." />
+  }
+
+  const mangas = result.data || []
+  const total = result.total || 0
+
+  if (mangas.length === 0) {
+    return <EmptyState title={`Nenhum resultado para "${query}" no Nexus`} />
+  }
+
+  const limit = 24
+  const pages = Math.ceil(total / limit) || 1
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">
+        {total} resultado{total !== 1 ? "s" : ""}
+        {query ? ` para "${query}"` : ""}
+        {" "}— Fonte: <span className="text-accent font-medium">Nexus</span>
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {mangas.map((m: NexusManga) => (
+          <Link
+            key={m.id}
+            href={`/manga/${m.slug || m.id}?source=nexustoons`}
+            className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
+          >
+            <div className="relative aspect-[3/4] overflow-hidden bg-card">
+              {m.coverImage ? (
+                <Image
+                  src={m.coverImage}
+                  alt={m.title || ""}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 16vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted text-xs">
+                  Sem capa
+                </div>
+              )}
+              <div className="absolute top-1.5 left-1.5">
+                <SourceBadge source="nexustoons" size="xs" />
+              </div>
+            </div>
+            <div className="px-2 pb-2">
+              <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
+                {m.title}
+              </h3>
+              {m.type && (
+                <span className="text-[10px] text-muted mt-0.5 block uppercase">{m.type}</span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+      {pages > 1 && <Pagination currentPage={page} total={total} limit={limit} basePath={`/busca?q=${encodeURIComponent(query)}&source=nexustoons`} />}
+    </div>
+  )
+}
+
 async function FiltersSection() {
   const tags = await getTagsCached()
   return <SearchFilters tags={tags} />
@@ -355,7 +431,7 @@ export default async function BuscaPage({
 }) {
   const params = await searchParams
   const filters = parseFilters(params)
-  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : "mangadex"
+  const source = params.source === "mangafire" ? "mangafire" : params.source === "mangastop" ? "mangastop" : params.source === "leiturmanga" ? "leiturmanga" : params.source === "queroler" ? "queroler" : params.source === "nexustoons" ? "nexustoons" : "mangadex"
 
   return (
     <div className="space-y-6">
@@ -437,6 +513,16 @@ function SourceToggle({ current, query }: { current: string; query?: string }) {
         }`}
       >
         QueroLer
+      </Link>
+      <Link
+        href={`${baseUrl}&source=nexustoons`}
+        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+          current === "nexustoons"
+            ? "bg-accent text-white"
+            : "bg-card border border-border text-muted hover:text-foreground"
+        }`}
+      >
+        Nexus
       </Link>
     </div>
   )

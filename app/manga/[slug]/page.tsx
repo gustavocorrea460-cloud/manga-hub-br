@@ -28,14 +28,17 @@ import type { MangaFireChapter } from "@/types/mangafire"
 import type { MangaStopChapter } from "@/types/mangastop"
 import type { LeituraMangaChapter } from "@/types/leiturmanga"
 import type { QueroLerChapter } from "@/types/queroler"
+import type { NexusChapter, NexusMangaDetailResponse } from "@/types/nexustoons"
 import {
   getLeituraMangaCached,
   getLeituraMangaChaptersCached,
   getQueroLerMangaCached,
   getQueroLerChaptersCached,
+  getNexusMangaCached,
+  getNexusChaptersCached,
 } from "@/lib/cache"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
+type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
 
 async function MangaDetailMangaDex({ mangaId }: { mangaId: string }) {
   let manga
@@ -634,6 +637,161 @@ async function ChaptersSectionQueroLer({ mangaId }: { mangaId: string }) {
   )
 }
 
+async function MangaDetailNexus({ mangaId }: { mangaId: string }) {
+  let manga: NexusMangaDetailResponse
+  try {
+    manga = await getNexusMangaCached(mangaId)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no Nexus." />
+  }
+
+  const categories = manga.categories || []
+  const genres = categories.filter(c => c.type === "genre")
+  const themes = categories.filter(c => c.type === "theme")
+
+  return (
+    <>
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
+        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
+          {manga.coverImage ? (
+            <Image
+              src={manga.coverImage}
+              alt={manga.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 256px"
+              className="object-cover"
+              priority
+              unoptimized
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted text-sm">
+              Sem capa
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 min-w-0">
+          <h1 className="text-2xl font-bold">{manga.title}</h1>
+
+          {manga.alternativeTitles && (
+            <p className="text-sm text-muted">{manga.alternativeTitles}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {manga.status && (
+              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
+                {manga.status}
+              </span>
+            )}
+            {manga.type && (
+              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted uppercase">
+                {manga.type}
+              </span>
+            )}
+            {manga.releaseYear && (
+              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
+                {manga.releaseYear}
+              </span>
+            )}
+            {manga.rating > 0 && (
+              <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-medium">
+                ★ {manga.rating.toFixed(1)}
+              </span>
+            )}
+          </div>
+
+          {manga.author && (
+            <p className="text-sm text-muted">
+              Autor: <span className="text-foreground">{manga.author}</span>
+            </p>
+          )}
+          {manga.publisher && (
+            <p className="text-sm text-muted">
+              Publisher: <span className="text-foreground">{manga.publisher}</span>
+            </p>
+          )}
+
+          {genres.length > 0 && (
+            <div className="text-sm text-muted">
+              Gêneros:{" "}
+              <span className="text-foreground">{genres.map(g => g.name).join(", ")}</span>
+            </div>
+          )}
+          {themes.length > 0 && (
+            <div className="text-sm text-muted">
+              Temas:{" "}
+              <span className="text-foreground">{themes.map(g => g.name).join(", ")}</span>
+            </div>
+          )}
+
+          {manga.description && (
+            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
+              {manga.description}
+            </p>
+          )}
+
+          {manga.views > 0 && (
+            <p className="text-xs text-muted">
+              {manga.views.toLocaleString("pt-BR")} visualizações
+            </p>
+          )}
+        </div>
+
+        <div className="md:hidden w-full">
+          <SourceBadge source="nexustoons" />
+        </div>
+      </div>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          Capítulos
+          <SourceBadge source="nexustoons" size="xs" />
+        </h2>
+        <ChaptersSectionNexus slug={manga.slug} />
+      </section>
+    </>
+  )
+}
+
+async function ChaptersSectionNexus({ slug }: { slug: string }) {
+  let chapters: NexusChapter[]
+  try {
+    chapters = await getNexusChaptersCached(slug)
+  } catch {
+    return <ErrorMessage message="Não foi possível carregar os capítulos do Nexus." />
+  }
+
+  if (chapters.length === 0) {
+    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
+  }
+
+  return (
+    <div className="space-y-1">
+      {chapters.map(ch => (
+        <Link
+          key={ch.id}
+          href={`/leitor/${ch.id}?source=nexustoons&mangaId=${encodeURIComponent(slug)}`}
+          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-sm font-medium text-foreground shrink-0">
+              Cap. {ch.number}
+            </span>
+            {ch.title && (
+              <span className="text-sm text-muted truncate">{ch.title}</span>
+            )}
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
 async function ChaptersSectionMangaStop({ mangaId }: { mangaId: string }) {
   let chapters: MangaStopChapter[]
   try {
@@ -681,7 +839,7 @@ export default async function MangaPage({
   searchParams: Promise<{ source?: string }>
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : "mangadex"
+  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : sp.source === "nexustoons" ? "nexustoons" : "mangadex"
 
   if (!slug) notFound()
 
@@ -693,7 +851,9 @@ export default async function MangaPage({
         ? MangaDetailLeituraManga
         : source === "queroler"
           ? MangaDetailQueroLer
-          : MangaDetailMangaDex
+          : source === "nexustoons"
+            ? MangaDetailNexus
+            : MangaDetailMangaDex
 
   return (
     <Suspense fallback={<MangaDetailSkeleton />}>

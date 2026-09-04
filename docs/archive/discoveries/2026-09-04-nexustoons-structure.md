@@ -106,6 +106,18 @@ data = json.load(open('payload.json'))  # {"d": "...", "k": 1, "v": 2}
 plain = json.loads(crypto.decrypt(data.get('k', 0), data['d']))
 ```
 
+### Implementação TypeScript no projeto (lib/api/orion.ts) ✅ INTEGRADA
+
+A implementação oficial do projeto está em `lib/api/orion.ts` (classe `OrionCrypto`)
+com `decryptPayload({d, k, v})` e singletons. Testada com payloads reais:
+- `/api/read/194900` → 17 páginas decriptadas ✅
+- `/api/manga/pico-marcial` → detalhes + 3862 capítulos ✅
+- `/api/mangas?q=` → busca sem criptografia (13559 resultados) ✅
+
+> ⚠️ A criptografia é proprietária do Nexus. A integração é feita com
+> responsabilidade: rate limit gentil, cache e respeito a termos de serviço.
+> Se o projeto for monetizado/público, reavaliar legalmente.
+
 ---
 
 ## 📡 Endpoints da API Nexus (mapeados)

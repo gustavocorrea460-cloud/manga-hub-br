@@ -94,7 +94,20 @@ export const SOURCES: Record<SourceId, SourceMeta> = {
     readable: false,
     cachePrefix: "ql",
     status: "down",
-    description: "Fonte BR complementar (search-only, PDF, rate-limited)",
+    description: "Fonte BR complementar (search-only, PDF, rate-limited) — DOWN desde 2026-09-04",
+  },
+  nexustoons: {
+    id: "nexustoons",
+    label: "Nexus",
+    type: "api",
+    scope: "fallback",
+    color: "yellow",
+    baseUrl: "https://nexustoons.com",
+    searchable: true,
+    readable: true,
+    cachePrefix: "nx",
+    status: "active",
+    description: "Agregador PT-BR massivo (13.5k+ títulos, API criptografada OrionCrypto)",
   },
 }
 
