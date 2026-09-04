@@ -24,8 +24,8 @@
 
 ## Progresso
 
-- **Último passo:** Fase 3 — TIMELINE.md criado, 4 discovery files indexados, AGENTS.md atualizado (boot + referências)
-- **Próximo passo:** Fase 3 finalizada — commit + SESSIONS.md (sessão 21)
+- **Último passo:** Fase 3 completa — TIMELINE.md criado, 4 discovery files, AGENTS.md atualizado, commit `8856f33` pushado
+- **Próximo passo:** Reinício do projeto (Fase 3 de docs finalizada) — pendências: testar QueroLer em produção, revogar token antigo, considerar MangaPlus
 
 ## 📋 ÍNDICE
 
