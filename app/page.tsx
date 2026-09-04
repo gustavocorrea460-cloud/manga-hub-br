@@ -1,4 +1,5 @@
 import MangaCard from "@/components/MangaCard"
+import ContinueReading from "@/components/ContinueReading"
 import Pagination from "@/components/Pagination"
 import ErrorMessage from "@/components/ErrorMessage"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
@@ -53,6 +54,8 @@ export default async function HomePage({
 
   return (
     <div className="space-y-6">
+      <ContinueReading />
+
       <div>
         <h1 className="text-2xl font-bold">Lançamentos Recentes</h1>
         <p className="text-muted text-sm mt-1">

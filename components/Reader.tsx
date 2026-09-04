@@ -16,6 +16,12 @@ interface Props {
   nextChapterId?: string | null
   scanlator?: string | null
   absoluteUrls?: boolean
+  /** Título do mangá para Continue Reading (opcional) */
+  mangaTitle?: string
+  /** Capa do mangá para Continue Reading (opcional) */
+  mangaCoverUrl?: string | null
+  /** Fonte para Continue Reading (opcional) */
+  sourceLabel?: string
 }
 
 type ReadingMode = "single" | "long-strip"
@@ -24,12 +30,16 @@ export default function Reader({
   pages,
   baseUrl,
   hash,
+  chapterId,
   mangaId,
   useDataSaver = false,
   prevChapterId,
   nextChapterId,
   scanlator,
   absoluteUrls = false,
+  mangaTitle,
+  mangaCoverUrl,
+  sourceLabel,
 }: Props) {
   const [currentPage, setCurrentPage] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -38,6 +48,29 @@ export default function Reader({
   const [scrollProgress, setScrollProgress] = useState(0)
   const [retryKey, setRetryKey] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // ── Continue Reading: salva progresso no localStorage ──
+  useEffect(() => {
+    if (!mangaId || !chapterId) return
+    try {
+      const key = "mhub:continue"
+      const raw = localStorage.getItem(key)
+      const list: { mangaId: string; chapterId: string; chapterNumber: string; title: string; coverUrl: string | null; source: string; updatedAt: number }[] = raw ? JSON.parse(raw) : []
+      const entry = {
+        mangaId,
+        chapterId,
+        chapterNumber: chapterId.split(":")[1] || chapterId,
+        title: mangaTitle || "",
+        coverUrl: mangaCoverUrl || null,
+        source: sourceLabel || "mangadex",
+        updatedAt: Date.now(),
+      }
+      const next = [entry, ...list.filter(c => c.mangaId !== mangaId)].slice(0, 20)
+      localStorage.setItem(key, JSON.stringify(next))
+    } catch {
+      // ignore
+    }
+  }, [mangaId, chapterId, mangaTitle, mangaCoverUrl, sourceLabel])
 
   const suffix = useDataSaver ? "data-saver" : "data"
 

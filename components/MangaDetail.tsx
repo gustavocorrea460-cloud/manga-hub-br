@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import SourceBadge from "@/components/SourceBadge"
+import FavoriteButton from "@/components/FavoriteButton"
 import type { SourceId } from "@/components/SourceBadge"
 
 /** Dados normalizados do mangá — qualquer fonte converte para cá */
@@ -146,6 +147,10 @@ export default function MangaDetail({ manga, chapters, readingUrl }: Props) {
               Começar a Ler
             </Link>
           )}
+
+          <div className="flex items-center gap-2">
+            <FavoriteButton manga={manga} />
+          </div>
         </div>
       </div>
 

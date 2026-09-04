@@ -15,6 +15,7 @@ import {
   getNexusPagesCached,
   getNexusChaptersCached,
 } from "@/lib/cache"
+import { getMangaSource } from "@/lib/sources"
 import type { SourceId } from "@/components/SourceBadge"
 
 function sortByNumberDesc<T extends { number: string }>(list: T[]): T[] {
@@ -49,9 +50,21 @@ interface ReaderData {
   pages: string[]
   prevId: string | null
   nextId: string | null
+  mangaTitle?: string
+  mangaCoverUrl?: string | null
 }
 
 async function fetchPages(source: SourceId, chapterId: string, mangaId?: string): Promise<ReaderData> {
+  let mangaInfo: { title: string; coverUrl: string | null } | null = null
+  if (mangaId) {
+    try {
+      const m = await getMangaSource(mangaId, source)
+      mangaInfo = { title: m.title, coverUrl: m.coverUrl }
+    } catch {
+      // não crítico
+    }
+  }
+
   switch (source) {
     case "mangafire": {
       const images = await getMangaFirePagesCached(chapterId)
@@ -63,7 +76,7 @@ async function fetchPages(source: SourceId, chapterId: string, mangaId?: string)
         prevId = r.prevId
         nextId = r.nextId
       }
-      return { pages: images, prevId, nextId }
+      return { pages: images, prevId, nextId, mangaTitle: mangaInfo?.title, mangaCoverUrl: mangaInfo?.coverUrl }
     }
     case "mangastop": {
       const images = await getMangaStopPagesCached(chapterId)
@@ -75,7 +88,7 @@ async function fetchPages(source: SourceId, chapterId: string, mangaId?: string)
         prevId = r.prevId
         nextId = r.nextId
       }
-      return { pages: images, prevId, nextId }
+      return { pages: images, prevId, nextId, mangaTitle: mangaInfo?.title, mangaCoverUrl: mangaInfo?.coverUrl }
     }
     case "leiturmanga": {
       const images = await getLeituraMangaPagesCached(chapterId)
@@ -88,7 +101,7 @@ async function fetchPages(source: SourceId, chapterId: string, mangaId?: string)
         prevId = r.prevId
         nextId = r.nextId
       }
-      return { pages: images, prevId, nextId }
+      return { pages: images, prevId, nextId, mangaTitle: mangaInfo?.title, mangaCoverUrl: mangaInfo?.coverUrl }
     }
     case "nexustoons": {
       const pages = await getNexusPagesCached(chapterId)
@@ -100,10 +113,10 @@ async function fetchPages(source: SourceId, chapterId: string, mangaId?: string)
         prevId = r.prevId
         nextId = r.nextId
       }
-      return { pages: pages.map(p => p.imageUrl), prevId, nextId }
+      return { pages: pages.map(p => p.imageUrl), prevId, nextId, mangaTitle: mangaInfo?.title, mangaCoverUrl: mangaInfo?.coverUrl }
     }
     case "queroler":
-      return { pages: [], prevId: null, nextId: null }
+      return { pages: [], prevId: null, nextId: null, mangaTitle: mangaInfo?.title, mangaCoverUrl: mangaInfo?.coverUrl }
     case "mangadex":
     default: {
       const pagesData = await getChapterPagesCached(chapterId)
@@ -122,7 +135,7 @@ async function fetchPages(source: SourceId, chapterId: string, mangaId?: string)
           nextId = idx > 0 ? sorted[idx - 1].id : null
         }
       }
-      return { pages: pagesData.dataSaver, prevId, nextId }
+      return { pages: pagesData.dataSaver, prevId, nextId, mangaTitle: mangaInfo?.title, mangaCoverUrl: mangaInfo?.coverUrl }
     }
   }
 }
@@ -178,6 +191,9 @@ async function ReaderContent({
       prevChapterId={data.prevId}
       nextChapterId={data.nextId}
       absoluteUrls={source !== "mangadex"}
+      mangaTitle={data.mangaTitle}
+      mangaCoverUrl={data.mangaCoverUrl}
+      sourceLabel={source}
     />
   )
 }
