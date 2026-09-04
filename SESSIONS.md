@@ -11,6 +11,38 @@
 
 ---
 
+## Sessão 22 — 2026-06-01 | Fase 3 — Estrutura de resiliência (TIMELINE + discoveries)
+
+**O que foi feito:**
+- **TIMELINE.md criado** — cache quente da sessão com:
+  - Sessão atual, pilha (com pendências), progresso (último/próximo passo)
+  - 📋 ÍNDICE com todos os arquivos de memória + discovery files
+  - Histórico das últimas 5 sessões
+- **docs/archive/discoveries/ criado** — 4 discovery files documentando descobertas técnicas:
+  - `2026-05-24-mangastop-ts-token.md` — token `_ts_internal_config` + origin CDN do MangaStop
+  - `2026-05-24-queroler-rate-limit.md` — rate limit 800ms + adblock detection
+  - `2026-05-24-leiturmanga-nextjs-ssr.md` — Next.js SSR sem API exposta
+  - `2026-06-01-github-token-remote-leak.md` — lição de segurança (token na URL do remote)
+- **AGENTS.md atualizado** — boot vira 7 passos (TIMELINE.md adicionado entre AGENTS e MEMORY), referências rápidas com TIMELINE
+- **Push sincronizado** — `e2d8720` no origin
+
+**Decisões:**
+- TIMELINE.md como cache quente (sessão atual) — MEMORY.md/SESSIONS.md continuam como fonte completa
+- Discovery files no formato `YYYY-MM-DD-assunto.md` com: problema, solução, decisões-chave, gotchas
+- Cada discovery deve ter entrada no 📋 ÍNDICE do TIMELINE.md
+
+**Estado do build:** ✅ Compilando (8 routes)
+**Commit:** `e2d8720`
+
+**Próximos passos:**
+- [ ] Testar QueroLer em produção: `/busca?source=queroler&q=one+piece`
+- [ ] Revogar token antigo `ghp_7wbOgl...` no GitHub (ação do usuário)
+- [ ] MangaPlus (oficial Shueisha) como próxima fonte
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 21 — 2026-06-01 | Fase 2 — Propagação de decisões + push
 
 **O que foi feito:**
