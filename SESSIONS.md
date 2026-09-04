@@ -11,6 +11,43 @@
 
 ---
 
+## Sessão 21 — 2026-06-01 | Fase 2 — Propagação de decisões + push
+
+**O que foi feito:**
+- **Push dos 5 commits pendentes** — resolvida falha de autenticação:
+  - Token antigo embutido na URL do remote estava inválido/exposto
+  - Autenticado via `gh auth login` (device flow) + `gh auth setup-git`
+  - Remote limpo: `https://github.com/gustavocorrea460-cloud/manga-hub-br.git` (sem token)
+  - ⚠️ **Ação do usuário necessária:** revogar token antigo `ghp_7wbOgl...` no GitHub (Settings → Developer settings → Tokens)
+- **Commit da dívida do QueroLer** — código da Sessão 18 que nunca tinha sido commitado (11 arquivos, 862 inserções)
+- **Fase 2 executada** — 9 decisões propagadas do SESSIONS.md para MEMORY.md:
+  - Source toggle em vez de merge automático
+  - Image proxy separado em vez de middleware
+  - Reader com prop absoluteUrls
+  - Cache key namespaces por fonte (md, mf, ms, llm, ql)
+  - ChapterList derivada de first/last no LeituraManga
+  - ChapterId formato `{slug}:{number}`
+  - Sem busca nativa no LeituraManga
+  - QueroLer como search-only (PDF-only, sem reader)
+  - Rate limit + adblock detection no QueroLer
+- **Roadmap atualizado** — lógica de fallback no cache marcada como `[x]`
+
+**Decisões:**
+- Commit da dívida antes de continuar com fases de docs (working tree limpo primeiro)
+- Push antes de novas mudanças (proteger trabalho local no remote)
+
+**Estado do build:** ✅ Compilando (8 routes)
+**Commits:** `8d31c08` (QueroLer), `5e2fc16` (Fase 2)
+
+**Próximos passos:**
+- [ ] Fase 3 — TIMELINE.md + discoveries/ (estrutura de resiliência)
+- [ ] Revogar token antigo `ghp_7wbOgl...` no GitHub
+- [ ] Testar QueroLer em produção: `/busca?source=queroler&q=one+piece`
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 20 — 2026-05-31 | Fase 1 — Separação de responsabilidades AGENTS.md / MEMORY.md
 
 **O que foi feito:**
