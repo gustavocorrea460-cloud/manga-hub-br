@@ -466,6 +466,103 @@ para obter capítulos/imagens). Estrutura HTML consistente com IDs previsíveis.
 **Impacto:** Primeira integração multi-source servirá como prova de conceito
 para o BaseScraper + cache multi-fonte + image proxy.
 
+### Decisão: Source toggle em vez de merge automático (2026-05-24)
+
+**Contexto:** Com múltiplas fontes, surge a pergunta: fundir resultados de
+todas as fontes ou deixar o usuário escolher?
+
+**Decisão:** Source toggle (parâmetro `?source=`) em vez de merge automático:
+- UX mais clara — o usuário sabe exatamente de onde veio cada resultado
+- Evita conflitos de ID entre fontes (cada fonte tem IDs diferentes)
+
+**Impacto:** Todas as páginas (busca, detalhes, leitor) filtram por fonte via
+query param `?source=`.
+
+### Decisão: Image proxy separado em vez de middleware (2026-05-24)
+
+**Contexto:** Imagens do MangaFire têm hotlink protection (precisam de Referer).
+
+**Decisão:** API route `/api/proxy` dedicada em vez de middleware:
+- Mais simples, sem overhead em requests normais
+- Força-dynamic para evitar cache de URLs com query
+
+**Impacto:** `/api/proxy?url=` usado apenas quando a fonte exige (MangaFire);
+fontes com CDN aberta (MangaStop, LeituraManga) usam URLs diretas no `<img>`.
+
+### Decisão: Reader com prop `absoluteUrls` em vez de componente separado (2026-05-24)
+
+**Contexto:** Fontes alternativas servem URLs absolutas em formatos diferentes.
+
+**Decisão:** Reader.tsx aceita prop opcional `absoluteUrls` — mínimo impacto no
+código existente, um único componente para todas as fontes.
+
+**Impacto:** Todos os readers (MangaFire, MangaStop, LeituraManga) reutilizam o
+mesmo componente Reader com URLs absolutas.
+
+### Decisão: Cache key namespaces por fonte (2026-05-24)
+
+**Contexto:** Multi-fonte no mesmo schema de cache. IDs de manga podem colidir
+entre fontes (ex: "one-piece" pode existir no MangaStop e no MangaFire).
+
+**Decisão:** Prefixos por fonte nas chaves de cache: `md:*` (MangaDex), `mf:*`
+(MangaFire), `ms:*` (MangaStop), `llm:*` (LeituraManga), `ql:*` (QueroLer).
+TTL 30min para todas (exceto tags: 6h).
+
+### Decisão: ChapterList derivada de first/last no LeituraManga (2026-05-24)
+
+**Contexto:** LeituraManga.net usa React Query client-side — não expõe API de
+capítulos no servidor.
+
+**Decisão:** Derivar range de capítulos a partir de first/last chapter
+(campos "Ler Primeiro/Último Capítulo" da página), com limite de 500.
+
+**Impacto:** Sem endpoint adicional; getChapters() do LeituraManga gera a lista
+por range.
+
+### Decisão: ChapterId formato `{slug}:{number}` (2026-05-24)
+
+**Contexto:** Source-fallback precisa localizar capítulos equivalentes entre
+fontes para navegação (prev/next) e deduplicação.
+
+**Decisão:** IDs de capítulo no formato `{slug}:{number}` (separado por ":")
+para fontes sem ID real (LeituraManga, MangaStop).
+
+**Impacto:** Compatibilidade com cache, navegação prev/next e fallback chain;
+`extractSlug()`/`extractChapterNumber()` helpers em cada types/ da fonte.
+
+### Decisão: Sem busca nativa no LeituraManga (2026-05-24)
+
+**Contexto:** Busca gringa `/?s=` do LeituraManga.net retorna a homepage (não
+funciona).
+
+**Decisão:** LeituraManga é fonte de navegação (catálogo via sitemap), não de
+busca. `searchManga()` retorna vazio; busca coberta por MangaDex/MangaFire/
+MangaStop/QueroLer.
+
+### Decisão: QueroLer como search-only (2026-05-24)
+
+**Contexto:** QueroLer.com é PDF-only — sem reader online para páginas de
+capítulo.
+
+**Decisão:** QueroLer integrado como fonte de **busca e metadados** apenas:
+- Sem `getChapterPages()` (não existe reader online)
+- Sem dump de catálogo (PDF não serve como fallback de leitura)
+- Links para download de PDF externos nas páginas de detalhe
+
+**Impacto:** QueroLer incluído em `searchAllSources` e `findAlternativesForReader`
+(para descoberta), mas ignorado como fallback de leitura real.
+
+### Decisão: Rate limit + adblock detection no QueroLer (2026-05-24)
+
+**Contexto:** QueroLer bloqueia conteúdo se scripts de tracking não carregarem
+(adblock detection), e barra IP se fizer requests rápido demais.
+
+**Decisão:** `MIN_REQUEST_GAP_MS = 800ms` via `rateLimitedFetch()` + detecção
+de keywords de bloqueio no HTML com retry 1x após 2s.
+
+**Impacto:** Scraper QueroLer é o mais lento — sempre com delay entre requests
+e tolerante a respostas bloqueadas.
+
 ---
 
 ## 🔌 Interface MangaDex API
@@ -607,7 +704,7 @@ function slugify(title: string): string
 - [ ] Histórico de leitura
 - [ ] Continuar de onde parou
 - [x] Cliente MangaFire (lib/api/mangafire.ts) — fallback gringo ✅
-- [ ] Lógica de fallback no cache layer para fontes gringas
+- [x] Lógica de fallback no cache layer para fontes gringas (lib/source-fallback.ts — searchAllSources, findAlternativesForReader, deduplicateResults) ✅
 
 ### Fase 4 — Features extras
 
