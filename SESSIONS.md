@@ -11,6 +11,52 @@
 
 ---
 
+## Sessão 25 — 2026-09-04 | Redesign do Frontend (Design System v2 + refactor)
+
+**O que foi feito (redesign completo do frontend):**
+
+**FASE A — Design System v2:**
+- `globals.css`: tokens completos — escala de superfícies (card, card-hover, border-strong), semânticos (success/warning/error/info), radius (sm/md/lg/xl), shadows tintadas, `focus-visible`, utilities (`card-surface`, `accent-pill`, `tactile`, `fade-in`, `shimmer`)
+- `layout.tsx`: openGraph + viewport themeColor + manifest + Footer
+- `Footer.tsx`: novo rodapé (links + disclaimer)
+- `Navbar.tsx`: menu mobile (hamburguer), logo com ícone SVG, busca com ícone, aria
+- PWA base: `public/icon.svg` + `manifest.webmanifest`
+
+**FASE B — Componentes unificados (−1.678 linhas de duplicação):**
+- `MangaCard.tsx`: universal (CardManga normalizado, badge sempre, rating ★, fade-in por index)
+- `lib/adapters.ts`: mapeadores por fonte → CardManga (fromMangaDex/Fire/Stop/Nexus)
+- `SourceToggle.tsx`: via registry (só fontes active — QueroLer oculto, aria-current)
+- `MangaDetail.tsx`: layout único (capa, chips, gêneros/temas, rating, Começar a Ler, Favoritar, capítulos)
+- `app/manga/[slug]/page.tsx`: 863→360 linhas (fetchDetail por fonte)
+- `app/busca/page.tsx`: 529→280 linhas — **corrigido BUG LeituraManga** (mostrava MangaFire), QueroLer removido da UI, paginação consistente
+- `app/leitor/[chapterId]/page.tsx`: 397→230 linhas (getPrevNext genérico)
+- `app/catalogo/page.tsx`: MangaCard universal + SourceToggle filtrado
+
+**FASE C — Recursos:**
+- `lib/storage.ts`: hooks localStorage (useFavorites, useContinueReading)
+- `FavoriteButton.tsx`: favoritar no detalhe
+- `ContinueReading.tsx`: seção na home (últimos lidos com capa)
+- `Reader.tsx`: track de continue reading (mangaTitle/cover/source via props)
+
+**FASE D — Polimento:**
+- `EmptyState.tsx` / `ErrorMessage.tsx`: ícones SVG (sem emojis), cores semânticas
+
+**Fixes encontrados:**
+- `next.config.ts`: remotePatterns para TODOS os CDNs (mangafire, mangastop, comick, leituramanga, queroler, img.nx-toons.xyz) — Fix "Invalid src prop"
+
+**Estado do build:** ✅ Compilando (10 routes)
+**Commits:** `e0093fb`, `313c437`, `e78d1c5`, `36a1742`, `e3bf796`, `cf4ec12`
+
+**Próximos passos:**
+- [ ] Deploy Vercel (validar em produção)
+- [ ] Testar favoritos/continue reading em produção (localStorage)
+- [ ] Light mode (tokens preparados — falta `@media prefers-color-scheme`)
+- [ ] Página de favoritos (`/favoritos`)
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 24 — 2026-09-04 | Integração NexusToons (6ª fonte + OrionCrypto reversed)
 
 **O que foi feito:**

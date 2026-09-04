@@ -30,11 +30,14 @@
 - Busca por texto com paginação + filtros avançados (`?q=&page=&status=&year=`)
 - **6 fontes**: MangaDex, MangaFire, MangaStop.net, LeituraManga.net, NexusToons (✅ ativas, desde 2026-09-04) + QueroLer.com (⚠️ down desde 2026-09-04)
 - **Integração Nexus** (2026-09-04): API criptografada OrionCrypto REVERSED — `lib/api/orion.ts` + `lib/api/nexustoons.ts`, cache `nx:*`, 13.5k+ títulos PT-BR
-- **Source toggle** na busca com fallback chain automática
+- **Source toggle** na busca com fallback chain automática (via registry — QueroLer oculto)
 - **Image proxy** `/api/proxy?url=` para bypass de CORS/hotlink
 - **Catálogo** `/catalogo` com grid, paginação e filtro por fonte
+- **Favoritos** (localStorage) — botão no detalhe, `lib/storage.ts`
+- **Continue Reading** (localStorage) — seção na home + track no leitor
+- **Design system v2** (2026-09-04): tokens completos (escala accent, semânticos, radius, shadows), Footer, menu mobile, PWA manifest, ícones SVG (sem emojis)
 - Cache PostgreSQL com fallback se API cair
-- Tema escuro (#0f0f0f + accent roxo #6c5ce7)
+- Tema escuro (#0d0d0f + accent roxo #6c5ce7)
 - Cron de atualização automática (GitHub Actions a cada 30min)
 
 ---
@@ -344,23 +347,29 @@ CREATE TABLE IF NOT EXISTS reading_history (
 │   ├── sources.ts                 # Unified adapter multi-source
 │   └── utils.ts                   # Helpers (formatação, data, etc.)
 ├── components/
+│   ├── MangaCard.tsx              # Card universal (CardManga normalizado, badge, rating, fade-in)
+│   ├── MangaDetail.tsx            # Layout único de detalhe (info + capítulos + favorito)
+│   ├── SourceToggle.tsx           # Toggle de fontes via registry (só active)
+│   ├── FavoriteButton.tsx         # Botão favoritar (localStorage)
+│   ├── ContinueReading.tsx        # Seção 'continue lendo' na home (localStorage)
 │   ├── Pagination.tsx             # Componente de paginação compartilhado
-│   ├── MangaCard.tsx              # Card de mangá na grid (suporta source badge)
 │   ├── ChapterList.tsx            # Lista de capítulos
-│   ├── Reader.tsx                 # Leitor (teclado, clique lateral, navegação caps, webtoon)
-│   ├── Navbar.tsx                 # Navegação superior
+│   ├── Reader.tsx                 # Leitor (teclado, clique lateral, navegação caps, webtoon, continue)
+│   ├── Navbar.tsx                 # Navegação superior (menu mobile, ícone logo)
+│   ├── Footer.tsx                 # Rodapé (links + disclaimer)
 │   ├── SearchBar.tsx              # Input de busca (mantém query + source)
 │   ├── SearchFilters.tsx          # Filtros avançados (status, ano, tags, gêneros)
 │   ├── SourceBadge.tsx            # Badge visual de identificação de fonte
 │   ├── LoadingSkeleton.tsx        # Skeleton de loading
-│   ├── ErrorMessage.tsx           # Mensagem de erro
-│   └── EmptyState.tsx             # Estado vazio
+│   ├── ErrorMessage.tsx           # Mensagem de erro (ícone SVG)
+│   └── EmptyState.tsx             # Estado vazio (ícones temáticos)
 ├── types/
 │   ├── mangadex.ts               # Tipos TypeScript da API + helpers
 │   ├── mangafire.ts              # Tipos MangaFire scraper + helpers
 │   ├── mangastop.ts              # Tipos MangaStop scraper + helpers
 │   ├── leiturmanga.ts            # Tipos LeituraManga scraper + helpers
-│   └── queroler.ts               # Tipos QueroLer scraper + helpers
+│   ├── queroler.ts               # Tipos QueroLer scraper + helpers
+│   └── nexustoons.ts             # Tipos NexusToons + helpers
 ├── scripts/
 │   ├── dump-mangastop.ts          # Dump do catálogo MangaStop (2456 mangás)
 │   └── dump-leiturmanga.ts        # Dump do catálogo LeituraManga.net

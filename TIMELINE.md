@@ -25,8 +25,8 @@
 
 ## Progresso
 
-- **Último passo:** Integração NexusToons COMPLETA (6ª fonte): orion.ts (OrionCrypto) + nexustoons.ts + cache nx:* + adapter + UI (busca/detalhe/leitor) — build ✅, testes ✅
-- **Próximo passo:** Commit da integração Nexus + push
+- **Último passo:** Redesign frontend COMPLETO (Fases A-D): design system v2, componentes unificados (−1.678 linhas duplicação), favoritos + continue reading, fix next.config — build ✅, screenshots validados ✅
+- **Próximo passo:** Commit docs + push (SESSIONS.md sessão 25)
 
 ## 📋 ÍNDICE
 
