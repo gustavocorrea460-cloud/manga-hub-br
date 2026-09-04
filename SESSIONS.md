@@ -11,6 +11,45 @@
 
 ---
 
+## Sessão 23 — 2026-09-04 | Análise de fontes + registry/health + QueroLer DOWN
+
+**O que foi feito:**
+- **Análise completa do Nexustoons.com** (SPA React + Vite + PWA + API Express + Cloudflare):
+  - API self-hosted: `/api/mangas`, `/api/manga/{slug}`, `/api/chapter/{id}`, `/api/read/{id}`
+  - **OrionCrypto REVERSED** — criptografia cliente-side (`{d, k, v}`), secret `OrionNexus2025CryptoKey!Secure`, 5 chaves SHA-256, RC4-like
+  - Schema rico: mangas (rating, views, publisher, studio, muRating), chapters (accessLevel, coinCost, pageToken), categories (genre|theme), pages (imageUrl, pageNumber)
+  - CDN `img.nx-toons.xyz` sem hotlink protection
+  - Discovery file: `2026-09-04-nexustoons-structure.md`
+- **Análise do MangaStop.net** — WordPress + theme mangareader confirmado (não mudou)
+- **Pesquisa de projetos open-source** — miihon (23.3k⭐, source-api pattern), comick-source-api (Next.js multi-fonte = mais próximo), mangayomi (3.7k⭐, tracers), houdoku, mangahook-api, AI_Manga_Reader
+- **Implementação (primeiras melhorias do relatório):**
+  - `lib/api/registry.ts` — registry central de fontes (id, label, cor, tipo, escopo, status, cachePrefix)
+  - `app/api/sources/route.ts` — descoberta de fontes (padrão comick-source-api)
+  - `app/api/health/route.ts` — health check por fonte (timeout 6s, `?source=X`)
+- **Descobriu QueroLer.com DOWN** (404 em todos endpoints: raiz, busca, www, .br):
+  - Removido do `searchAllSources` (código mantido p/ reativação)
+  - `status: "down"` no registry
+  - Discovery file: `2026-09-04-queroler-down.md`
+  - `/api/health` **prova seu valor** — detectou automaticamente o problema
+
+**Decisões:**
+- Implementar primeiro as melhorias de menor risco/maior valor: `/api/sources` + `/api/health` (diagnóstico), antes de refactor maior (extensions pattern Mihon)
+- QueroLer: manter código + remover do fallback ativo (reativação futura fácil)
+- Nexus: documentado como fonte potencial, mas integração exige revisão (risco legal + criptografia)
+
+**Estado do build:** ✅ Compilando (10 routes — 2 novas: /api/sources, /api/health)
+**Commit:** `62b8423`
+
+**Próximos passos:**
+- [ ] Considerar integração Nexus como 6ª fonte (decisão do usuário)
+- [ ] Usar `/api/health` no frontend (badge de status de fonte na busca)
+- [ ] Refactor extensions pattern (Mihon-style) nos scrapers
+- [ ] Revogar token antigo `ghp_7wbOgl...` no GitHub
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 22 — 2026-06-01 | Fase 3 — Estrutura de resiliência (TIMELINE + discoveries)
 
 **O que foi feito:**
