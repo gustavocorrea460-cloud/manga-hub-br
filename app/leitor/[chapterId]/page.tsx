@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 import Reader from "@/components/Reader"
 import ErrorMessage from "@/components/ErrorMessage"
+import SourceBadge from "@/components/SourceBadge"
 import {
   getChapterPagesCached,
   getChaptersCached,
@@ -8,85 +10,120 @@ import {
   getMangaFireChaptersCached,
   getMangaStopPagesCached,
   getMangaStopChaptersCached,
+  getLeituraMangaPagesCached,
+  getLeituraMangaChaptersCached,
   getNexusPagesCached,
   getNexusChaptersCached,
 } from "@/lib/cache"
-import SourceBadge from "@/components/SourceBadge"
-import { getScanlatorName } from "@/types/mangadex"
-import { Suspense } from "react"
-import type { Chapter } from "@/types/mangadex"
-import type { MangaFireChapter } from "@/types/mangafire"
-import type { MangaStopChapter } from "@/types/mangastop"
-import type { LeituraMangaChapter } from "@/types/leiturmanga"
-import {
-  getLeituraMangaPagesCached,
-  getLeituraMangaChaptersCached,
-} from "@/lib/cache"
+import type { SourceId } from "@/components/SourceBadge"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
-
-async function getPrevNextMangaDex(
-  chapters: Chapter[],
-  currentId: string,
-): Promise<{ prevId: string | null; nextId: string | null }> {
-  const sorted = [...chapters].sort((a, b) => {
-    const an = parseFloat(a.attributes.chapter || "0")
-    const bn = parseFloat(b.attributes.chapter || "0")
-    return bn - an
-  })
-  const idx = sorted.findIndex(c => c.id === currentId)
-  return {
-    prevId: idx < sorted.length - 1 ? sorted[idx + 1].id : null,
-    nextId: idx > 0 ? sorted[idx - 1].id : null,
-  }
-}
-
-async function getPrevNextMangaFire(
-  chapters: MangaFireChapter[],
-  currentId: string,
-): Promise<{ prevId: string | null; nextId: string | null }> {
-  const sorted = [...chapters].sort((a, b) => {
+function sortByNumberDesc<T extends { number: string }>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
     const an = parseFloat(a.number || "0")
     const bn = parseFloat(b.number || "0")
     return bn - an
   })
-  const idx = sorted.findIndex(c => c.chapterId === currentId)
+}
+
+interface ChapterLike {
+  id: string
+  number: string
+}
+
+/** Prev/next por número — genérico para qualquer fonte com {number, id-like} */
+function getPrevNext<T extends { number: string }>(
+  chapters: T[],
+  currentNumber: string,
+  idOf: (c: T) => string,
+): { prevId: string | null; nextId: string | null } {
+  const sorted = sortByNumberDesc(chapters)
+  const idx = sorted.findIndex(c => c.number === currentNumber)
+  if (idx === -1) return { prevId: null, nextId: null }
   return {
-    prevId: idx < sorted.length - 1 ? sorted[idx + 1].chapterId : null,
-    nextId: idx > 0 ? sorted[idx - 1].chapterId : null,
+    prevId: idx < sorted.length - 1 ? idOf(sorted[idx + 1]) : null,
+    nextId: idx > 0 ? idOf(sorted[idx - 1]) : null,
   }
 }
 
-async function getPrevNextLeituraManga(
-  chapters: LeituraMangaChapter[],
-  currentId: string,
-): Promise<{ prevId: string | null; nextId: string | null }> {
-  const currentNum = currentId.split(":")[1]
-  const sorted = [...chapters].sort((a, b) => {
-    const an = parseFloat(a.number || "0")
-    const bn = parseFloat(b.number || "0")
-    return bn - an
-  })
-  const idx = sorted.findIndex(c => c.number === currentNum)
-  return {
-    prevId: idx < sorted.length - 1 ? `${currentId.split(":")[0]}:${sorted[idx + 1].number}` : null,
-    nextId: idx > 0 ? `${currentId.split(":")[0]}:${sorted[idx - 1].number}` : null,
-  }
+interface ReaderData {
+  pages: string[]
+  prevId: string | null
+  nextId: string | null
 }
 
-async function getPrevNextMangaStop(
-  chapters: MangaStopChapter[],
-  currentId: string,
-): Promise<{ prevId: string | null; nextId: string | null }> {
-  const sorted = [...chapters].sort((a, b) => {
-    const an = parseFloat(a.number || "0")
-    const bn = parseFloat(b.number || "0")
-    return bn - an
-  })
-  const idx = sorted.findIndex(c => c.chapterId === currentId)
-  return {
-    prevId: idx < sorted.length - 1 ? sorted[idx + 1].chapterId : null,
-    nextId: idx > 0 ? sorted[idx - 1].chapterId : null,
+async function fetchPages(source: SourceId, chapterId: string, mangaId?: string): Promise<ReaderData> {
+  switch (source) {
+    case "mangafire": {
+      const images = await getMangaFirePagesCached(chapterId)
+      let prevId: string | null = null
+      let nextId: string | null = null
+      if (mangaId) {
+        const chapters = await getMangaFireChaptersCached(mangaId, "en")
+        const r = getPrevNext(chapters, chapterId, c => c.chapterId)
+        prevId = r.prevId
+        nextId = r.nextId
+      }
+      return { pages: images, prevId, nextId }
+    }
+    case "mangastop": {
+      const images = await getMangaStopPagesCached(chapterId)
+      let prevId: string | null = null
+      let nextId: string | null = null
+      if (mangaId) {
+        const chapters = await getMangaStopChaptersCached(mangaId)
+        const r = getPrevNext(chapters, String(chapterId), c => c.chapterId)
+        prevId = r.prevId
+        nextId = r.nextId
+      }
+      return { pages: images, prevId, nextId }
+    }
+    case "leiturmanga": {
+      const images = await getLeituraMangaPagesCached(chapterId)
+      let prevId: string | null = null
+      let nextId: string | null = null
+      if (mangaId) {
+        const chapters = await getLeituraMangaChaptersCached(mangaId)
+        const currentNum = chapterId.split(":")[1]
+        const r = getPrevNext(chapters, currentNum, c => `${mangaId}:${c.number}`)
+        prevId = r.prevId
+        nextId = r.nextId
+      }
+      return { pages: images, prevId, nextId }
+    }
+    case "nexustoons": {
+      const pages = await getNexusPagesCached(chapterId)
+      let prevId: string | null = null
+      let nextId: string | null = null
+      if (mangaId) {
+        const chapters = await getNexusChaptersCached(mangaId)
+        const r = getPrevNext(chapters, chapterId, c => String(c.id))
+        prevId = r.prevId
+        nextId = r.nextId
+      }
+      return { pages: pages.map(p => p.imageUrl), prevId, nextId }
+    }
+    case "queroler":
+      return { pages: [], prevId: null, nextId: null }
+    case "mangadex":
+    default: {
+      const pagesData = await getChapterPagesCached(chapterId)
+      let prevId: string | null = null
+      let nextId: string | null = null
+      if (mangaId) {
+        const chapters = await getChaptersCached(mangaId)
+        const sorted = [...chapters].sort((a, b) => {
+          const an = parseFloat(a.attributes.chapter || "0")
+          const bn = parseFloat(b.attributes.chapter || "0")
+          return bn - an
+        })
+        const idx = sorted.findIndex(c => c.id === chapterId)
+        if (idx !== -1) {
+          prevId = idx < sorted.length - 1 ? sorted[idx + 1].id : null
+          nextId = idx > 0 ? sorted[idx - 1].id : null
+        }
+      }
+      return { pages: pagesData.dataSaver, prevId, nextId }
+    }
   }
 }
 
@@ -99,298 +136,80 @@ async function ReaderContent({
   mangaId?: string
   source: SourceId
 }) {
-  if (source === "mangafire") {
-    return <MangaFireReader chapterId={chapterId} mangaId={mangaId} />
-  }
-
-  if (source === "mangastop") {
-    return <MangaStopReader chapterId={chapterId} mangaId={mangaId} />
-  }
-
-  if (source === "leiturmanga") {
-    return <LeituraMangaReader chapterId={chapterId} mangaId={mangaId} />
-  }
-
   if (source === "queroler") {
-    return <QueroLerReader chapterId={chapterId} mangaId={mangaId} />
-  }
-
-  if (source === "nexustoons") {
-    return <NexusReader chapterId={chapterId} mangaId={mangaId} />
-  }
-
-  let pagesData
-  try {
-    pagesData = await getChapterPagesCached(chapterId)
-  } catch {
     return (
-      <ErrorMessage message="Não foi possível carregar as páginas deste capítulo." />
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-accent" aria-hidden="true">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </div>
+        <p className="text-muted text-center max-w-md">
+          O QueroLer disponibiliza mangás apenas em formato <strong>PDF</strong> para download.
+        </p>
+        <p className="text-sm text-muted text-center max-w-md">
+          Para ler online, utilize outro agregador compatível com este mangá.
+        </p>
+      </div>
     )
   }
 
-  const { hash, baseUrl, dataSaver } = pagesData
-
-  let prevNext = { prevId: null as string | null, nextId: null as string | null }
-  let scanlator: string | null = null
-
-  if (mangaId) {
-    try {
-      const chapters = await getChaptersCached(mangaId)
-      prevNext = await getPrevNextMangaDex(chapters, chapterId)
-      const currentChapter = chapters.find(c => c.id === chapterId)
-      if (currentChapter) {
-        scanlator = getScanlatorName(currentChapter)
-      }
-    } catch {
-      // non-critical
-    }
-  }
-
-  return (
-    <Reader
-      pages={dataSaver}
-      baseUrl={baseUrl}
-      hash={hash}
-      chapterId={chapterId}
-      mangaId={mangaId || ""}
-      useDataSaver
-      prevChapterId={prevNext.prevId}
-      nextChapterId={prevNext.nextId}
-      scanlator={scanlator}
-    />
-  )
-}
-
-async function MangaStopReader({
-  chapterId,
-  mangaId,
-}: {
-  chapterId: string
-  mangaId?: string
-}) {
-  let images: string[]
+  let data: ReaderData
   try {
-    images = await getMangaStopPagesCached(chapterId)
+    data = await fetchPages(source, chapterId, mangaId)
   } catch {
-    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no MangaStop." />
+    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo." />
   }
 
-  let prevNext = { prevId: null as string | null, nextId: null as string | null }
-
-  if (mangaId) {
-    try {
-      const chapters = await getMangaStopChaptersCached(mangaId)
-      prevNext = await getPrevNextMangaStop(chapters, chapterId)
-    } catch {
-      // non-critical
-    }
+  if (data.pages.length === 0) {
+    return <ErrorMessage message="Este capítulo não possui páginas disponíveis." />
   }
 
   return (
     <Reader
-      pages={images}
+      pages={data.pages}
       baseUrl=""
       hash=""
       chapterId={chapterId}
       mangaId={mangaId || ""}
-      useDataSaver={false}
-      prevChapterId={prevNext.prevId}
-      nextChapterId={prevNext.nextId}
-      absoluteUrls
+      useDataSaver={source === "mangadex"}
+      prevChapterId={data.prevId}
+      nextChapterId={data.nextId}
+      absoluteUrls={source !== "mangadex"}
     />
   )
 }
 
-async function LeituraMangaReader({
-  chapterId,
-  mangaId,
-}: {
-  chapterId: string
-  mangaId?: string
-}) {
-  let images: string[]
-  try {
-    images = await getLeituraMangaPagesCached(chapterId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no LeituraManga." />
-  }
-
-  let prevNext = { prevId: null as string | null, nextId: null as string | null }
-
-  if (mangaId) {
-    try {
-      const chapters = await getLeituraMangaChaptersCached(mangaId)
-      prevNext = await getPrevNextLeituraManga(chapters, chapterId)
-    } catch {
-      // non-critical
-    }
-  }
-
-  return (
-    <Reader
-      pages={images}
-      baseUrl=""
-      hash=""
-      chapterId={chapterId}
-      mangaId={mangaId || ""}
-      useDataSaver={false}
-      prevChapterId={prevNext.prevId}
-      nextChapterId={prevNext.nextId}
-      absoluteUrls
-    />
-  )
-}
-
-async function QueroLerReader({
-  chapterId,
-  mangaId,
-}: {
-  chapterId: string
-  mangaId?: string
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4">
-      <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-          <polyline points="15 3 21 3 21 9" />
-          <line x1="10" y1="14" x2="21" y2="3" />
-        </svg>
-      </div>
-      <p className="text-muted text-center max-w-md">
-        O QueroLer disponibiliza mangás apenas em formato <strong>PDF</strong> para download.
-      </p>
-      <p className="text-sm text-muted text-center max-w-md">
-        Para ler online, utilize outro agregador compatível com este mangá.
-      </p>
-    </div>
-  )
-}
-
-async function NexusReader({
-  chapterId,
-  mangaId,
-}: {
-  chapterId: string
-  mangaId?: string
-}) {
-  let images: string[]
-  try {
-    const pages = await getNexusPagesCached(chapterId)
-    images = pages.map(p => p.imageUrl)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no Nexus." />
-  }
-
-  let prevNext = { prevId: null as string | null, nextId: null as string | null }
-
-  if (mangaId) {
-    try {
-      const chapters = await getNexusChaptersCached(mangaId)
-      prevNext = await getPrevNextNexus(chapters, chapterId)
-    } catch {
-      // non-critical
-    }
-  }
-
-  return (
-    <Reader
-      pages={images}
-      baseUrl=""
-      hash=""
-      chapterId={chapterId}
-      mangaId={mangaId || ""}
-      useDataSaver={false}
-      prevChapterId={prevNext.prevId}
-      nextChapterId={prevNext.nextId}
-      absoluteUrls
-    />
-  )
-}
-
-async function getPrevNextNexus(
-  chapters: { id: number; number: string }[],
-  currentId: string,
-): Promise<{ prevId: string | null; nextId: string | null }> {
-  const sorted = [...chapters].sort((a, b) => {
-    const an = parseFloat(a.number || "0")
-    const bn = parseFloat(b.number || "0")
-    return bn - an
-  })
-  const idx = sorted.findIndex(c => String(c.id) === currentId)
-  return {
-    prevId: idx < sorted.length - 1 ? String(sorted[idx + 1].id) : null,
-    nextId: idx > 0 ? String(sorted[idx - 1].id) : null,
-  }
-}
-
-async function MangaFireReader({
-  chapterId,
-  mangaId,
-}: {
-  chapterId: string
-  mangaId?: string
-}) {
-  let images: string[]
-  try {
-    images = await getMangaFirePagesCached(chapterId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar as páginas deste capítulo no MangaFire." />
-  }
-
-  let prevNext = { prevId: null as string | null, nextId: null as string | null }
-
-  if (mangaId) {
-    try {
-      const chapters = await getMangaFireChaptersCached(mangaId, "en")
-      prevNext = await getPrevNextMangaFire(chapters, chapterId)
-    } catch {
-      // non-critical
-    }
-  }
-
-  return (
-    <Reader
-      pages={images}
-      baseUrl=""
-      hash=""
-      chapterId={chapterId}
-      mangaId={mangaId || ""}
-      useDataSaver={false}
-      prevChapterId={prevNext.prevId}
-      nextChapterId={prevNext.nextId}
-      absoluteUrls
-    />
-  )
-}
-
-export default async function ReaderPage({
+export default async function LeitorPage({
   params,
   searchParams,
 }: {
   params: Promise<{ chapterId: string }>
-  searchParams: Promise<{ mangaId?: string; source?: string }>
+  searchParams: Promise<{ source?: string; mangaId?: string }>
 }) {
   const [{ chapterId }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : sp.source === "nexustoons" ? "nexustoons" : "mangadex"
-  const { mangaId } = sp
-
   if (!chapterId) notFound()
 
+  const valid: SourceId[] = ["mangadex", "mangafire", "mangastop", "leiturmanga", "nexustoons", "queroler"]
+  const source = (sp.source as SourceId) || "mangadex"
+  const finalSource: SourceId = valid.includes(source) ? source : "mangadex"
+
   return (
-    <div className="py-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="space-y-4">
+      <header className="flex items-center gap-2">
         <h1 className="text-lg font-bold">Leitor</h1>
-        <SourceBadge source={source} />
-      </div>
+        <SourceBadge source={finalSource} size="xs" />
+      </header>
       <Suspense
         fallback={
-          <div className="flex items-center justify-center py-16">
+          <div className="flex justify-center py-24">
             <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
         }
       >
-        <ReaderContent chapterId={chapterId} mangaId={mangaId} source={source} />
+        <ReaderContent chapterId={chapterId} mangaId={sp.mangaId} source={finalSource} />
       </Suspense>
     </div>
   )

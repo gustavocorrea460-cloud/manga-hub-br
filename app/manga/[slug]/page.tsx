@@ -1,10 +1,8 @@
-import Image from "next/image"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
-import ChapterList from "@/components/ChapterList"
+import MangaDetail from "@/components/MangaDetail"
 import ErrorMessage from "@/components/ErrorMessage"
-import { ChapterListSkeleton, MangaDetailSkeleton } from "@/components/LoadingSkeleton"
+import { MangaDetailSkeleton } from "@/components/LoadingSkeleton"
 import {
   getMangaCached,
   getChaptersCached,
@@ -12,24 +10,6 @@ import {
   getMangaFireChaptersCached,
   getMangaStopCached,
   getMangaStopChaptersCached,
-} from "@/lib/cache"
-import { getCoverUrl as getMangaFireCoverUrl } from "@/lib/api/mangafire"
-import SourceBadge from "@/components/SourceBadge"
-import {
-  getTitle,
-  getDescription,
-  getCoverUrl,
-  getStatusLabel,
-  getContentRatingLabel,
-} from "@/types/mangadex"
-import { formatDate } from "@/lib/utils"
-import type { Chapter } from "@/types/mangadex"
-import type { MangaFireChapter } from "@/types/mangafire"
-import type { MangaStopChapter } from "@/types/mangastop"
-import type { LeituraMangaChapter } from "@/types/leiturmanga"
-import type { QueroLerChapter } from "@/types/queroler"
-import type { NexusChapter, NexusMangaDetailResponse } from "@/types/nexustoons"
-import {
   getLeituraMangaCached,
   getLeituraMangaChaptersCached,
   getQueroLerMangaCached,
@@ -37,798 +17,216 @@ import {
   getNexusMangaCached,
   getNexusChaptersCached,
 } from "@/lib/cache"
+import type { DetailManga, DetailChapter } from "@/components/MangaDetail"
+import type { SourceId } from "@/components/SourceBadge"
+import { getTitle, getCoverUrl, getStatusLabel } from "@/types/mangadex"
+import { formatDate } from "@/lib/utils"
 
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler" | "nexustoons"
+const SOURCE_IDS: SourceId[] = ["mangadex", "mangafire", "mangastop", "leiturmanga", "queroler", "nexustoons"]
 
-async function MangaDetailMangaDex({ mangaId }: { mangaId: string }) {
-  let manga
+interface MangaData {
+  manga: DetailManga
+  chapters: DetailChapter[]
+  readingUrl?: string | null
+}
+
+/** Fetcher por fonte: converte dados crus → DetailManga/DetailChapter */
+async function fetchDetail(source: SourceId, id: string): Promise<MangaData> {
+  switch (source) {
+    case "mangafire": {
+      const m = await getMangaFireCached(id)
+      const chapters = await getMangaFireChaptersCached(id, "en")
+      const genreTags = m.genres || []
+      return {
+        manga: {
+          id,
+          title: m.title || "Sem título",
+          coverUrl: m.poster || null,
+          status: m.status,
+          type: m.type,
+          year: m.published,
+          rating: null,
+          author: m.author,
+          genres: genreTags,
+          themes: [],
+          description: m.description || "",
+          source,
+        },
+        chapters: chapters.map(c => ({
+          id: c.chapterId,
+          number: c.number,
+          title: c.title,
+          date: c.releaseDate ? formatDate(c.releaseDate) : null,
+        })),
+      }
+    }
+
+    case "mangastop": {
+      const m = await getMangaStopCached(id)
+      const chapters = await getMangaStopChaptersCached(id)
+      return {
+        manga: {
+          id,
+          title: m.title || "Sem título",
+          coverUrl: m.coverUrl,
+          status: m.status,
+          type: m.type,
+          year: m.year,
+          rating: null,
+          author: m.author,
+          genres: m.genres || [],
+          themes: [],
+          description: m.description || "",
+          source,
+        },
+        chapters: chapters.map(c => ({
+          id: c.chapterId,
+          number: c.number,
+          title: c.title,
+          date: c.date ? formatDate(c.date) : null,
+        })),
+      }
+    }
+
+    case "leiturmanga": {
+      const m = await getLeituraMangaCached(id)
+      const chapters = await getLeituraMangaChaptersCached(id)
+      return {
+        manga: {
+          id,
+          title: m.title || "Sem título",
+          coverUrl: m.coverUrl,
+          status: m.status,
+          type: null,
+          year: m.year,
+          rating: null,
+          author: m.author,
+          genres: m.genres || [],
+          themes: [],
+          description: m.description || "",
+          source,
+        },
+        chapters: chapters.map(c => ({
+          id: `${id}:${c.number}`,
+          number: c.number,
+          title: c.title,
+          date: c.date ? formatDate(c.date) : null,
+        })),
+      }
+    }
+
+    case "queroler": {
+      const m = await getQueroLerMangaCached(id)
+      const chapters = await getQueroLerChaptersCached(id)
+      return {
+        manga: {
+          id,
+          title: m.title || "Sem título",
+          coverUrl: m.coverUrl,
+          status: m.status,
+          type: null,
+          year: m.year,
+          rating: null,
+          author: m.author,
+          genres: m.genres || [],
+          themes: [],
+          description: m.description || "",
+          source,
+        },
+        chapters: chapters.map(c => ({
+          id: c.id,
+          number: c.number,
+          title: c.title,
+          date: c.date ? formatDate(c.date) : null,
+          externalUrl: `https://queroler.com${c.pdfUrl}`,
+        })),
+      }
+    }
+
+    case "nexustoons": {
+      const m = await getNexusMangaCached(id)
+      const chapters = await getNexusChaptersCached(id)
+      const genres = (m.categories || []).filter(c => c.type === "genre").map(c => c.name)
+      const themes = (m.categories || []).filter(c => c.type === "theme").map(c => c.name)
+      return {
+        manga: {
+          id,
+          title: m.title || "Sem título",
+          coverUrl: m.coverImage,
+          status: m.status,
+          type: m.type,
+          year: m.releaseYear?.toString() || null,
+          rating: m.rating || null,
+          author: m.author || null,
+          genres,
+          themes,
+          description: m.description || "",
+          source,
+        },
+        chapters: chapters.map(c => ({
+          id: String(c.id),
+          number: c.number,
+          title: c.title,
+          date: c.createdAt ? formatDate(c.createdAt) : null,
+        })),
+      }
+    }
+
+    case "mangadex":
+    default: {
+      const m = await getMangaCached(id)
+      const chapters = await getChaptersCached(id)
+      const coverRel = m.relationships.find(r => r.type === "cover_art")
+      const fileName = coverRel?.attributes
+        ? (coverRel.attributes as { fileName?: string }).fileName
+        : undefined
+      const authorRel = m.relationships.find(r => r.type === "author")
+      const authorName = authorRel?.attributes
+        ? (authorRel.attributes as { name?: string }).name
+        : null
+      return {
+        manga: {
+          id,
+          title: getTitle(m),
+          coverUrl: getCoverUrl(m, "512"),
+          status: m.attributes.status,
+          type: null,
+          year: m.attributes.year?.toString() || null,
+          rating: null,
+          author: authorName || null,
+          genres: m.attributes.tags.map(t => t.attributes.name.en || ""),
+          themes: [],
+          description:
+            m.attributes.description["pt-br"] ||
+            m.attributes.description.en ||
+            "",
+          source,
+        },
+        chapters: chapters.map(c => ({
+          id: c.id,
+          number: c.attributes.chapter || "0",
+          title: c.attributes.title,
+          date: c.attributes.publishAt ? formatDate(c.attributes.publishAt) : null,
+        })),
+      }
+    }
+  }
+}
+
+async function MangaDetailPage({ mangaId, source }: { mangaId: string; source: SourceId }) {
+  let data: MangaData
   try {
-    manga = await getMangaCached(mangaId)
+    data = await fetchDetail(source, mangaId)
   } catch {
-    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá." />
+    return <ErrorMessage message={`Não foi possível carregar os detalhes deste mangá na fonte ${source}.`} />
   }
 
-  const title = getTitle(manga)
-  const description = getDescription(manga)
-  const coverUrl = getCoverUrl(manga, "512")
-  const author = manga.relationships.find(r => r.type === "author")
-  const authorName = author?.attributes
-    ? (author.attributes as { name?: string }).name
+  const firstChapter = data.chapters[0]
+  const readingUrl = firstChapter && !firstChapter.externalUrl
+    ? `/leitor/${firstChapter.id}?source=${source}&mangaId=${encodeURIComponent(mangaId)}`
     : null
 
-  return (
-    <>
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
-          {coverUrl ? (
-            <Image
-              src={coverUrl}
-              alt={title}
-              fill
-              sizes="(max-width: 768px) 100vw, 256px"
-              className="object-cover"
-              priority
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Sem capa
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <h1 className="text-2xl font-bold">{title}</h1>
-
-          <div className="flex flex-wrap gap-2">
-            <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-              {getStatusLabel(manga.attributes.status)}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-              {getContentRatingLabel(manga.attributes.contentRating)}
-            </span>
-            {manga.attributes.year && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.attributes.year}
-              </span>
-            )}
-          </div>
-
-          {authorName && (
-            <p className="text-sm text-muted">
-              Autor: <span className="text-foreground">{authorName}</span>
-            </p>
-          )}
-
-          <p className="text-sm text-muted leading-relaxed">
-            Atualizado em {formatDate(manga.attributes.updatedAt)}
-          </p>
-
-          {manga.attributes.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {manga.attributes.tags.map(tag => (
-                <span
-                  key={tag.id}
-                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
-                >
-                  {tag.attributes.name["pt-br"]
-                    || tag.attributes.name.en
-                    || tag.attributes.name.ja
-                    || ""}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {description && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
-              {description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Capítulos</h2>
-          <SourceBadge source="mangadex" />
-        </div>
-        <Suspense fallback={<ChapterListSkeleton />}>
-          <ChaptersSectionMangaDex mangaId={mangaId} />
-        </Suspense>
-      </section>
-    </>
-  )
-}
-
-async function ChaptersSectionMangaDex({ mangaId }: { mangaId: string }) {
-  let chapters
-  try {
-    chapters = await getChaptersCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os capítulos." />
-  }
-
-  return <ChapterList chapters={chapters} mangaId={mangaId} />
-}
-
-async function MangaDetailMangaFire({ mangaId }: { mangaId: string }) {
-  let manga
-  try {
-    manga = await getMangaFireCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no MangaFire." />
-  }
-
-  const coverUrl = getMangaFireCoverUrl(manga)
-
-  return (
-    <>
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
-          {coverUrl ? (
-            <Image
-              src={coverUrl}
-              alt={manga.title || ""}
-              fill
-              sizes="(max-width: 768px) 100vw, 256px"
-              className="object-cover"
-              priority
-              unoptimized
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Sem capa
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <h1 className="text-2xl font-bold">{manga.title}</h1>
-
-          {manga.altTitles && (
-            <p className="text-sm text-muted">{manga.altTitles}</p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {manga.status && (
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                {manga.status}
-              </span>
-            )}
-            {manga.type && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.type}
-              </span>
-            )}
-            {manga.rating && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                ★ {manga.rating}
-              </span>
-            )}
-          </div>
-
-          {manga.author && (
-            <p className="text-sm text-muted">
-              Autor: <span className="text-foreground">{manga.author}</span>
-            </p>
-          )}
-
-          {manga.published && (
-            <p className="text-sm text-muted">{manga.published}</p>
-          )}
-
-          {manga.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {manga.genres.map(g => (
-                <span
-                  key={g}
-                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
-                >
-                  {g}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {manga.description && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
-              {manga.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Capítulos</h2>
-          <SourceBadge source="mangafire" />
-        </div>
-        <Suspense fallback={<ChapterListSkeleton />}>
-          <ChaptersSectionMangaFire mangaId={mangaId} />
-        </Suspense>
-      </section>
-    </>
-  )
-}
-
-async function ChaptersSectionMangaFire({ mangaId }: { mangaId: string }) {
-  let chapters: MangaFireChapter[]
-  try {
-    chapters = await getMangaFireChaptersCached(mangaId, "en")
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os capítulos." />
-  }
-
-  if (chapters.length === 0) {
-    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
-  }
-
-  return (
-    <div className="space-y-1">
-      {chapters.map(ch => (
-        <Link
-          key={ch.chapterId}
-          href={`/leitor/${ch.chapterId}?mangaId=${mangaId}&source=mangafire`}
-          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-medium text-foreground shrink-0">
-              Cap. {ch.number}
-            </span>
-            {ch.title && (
-              <span className="text-sm text-muted truncate">{ch.title}</span>
-            )}
-          </div>
-          {ch.releaseDate && (
-            <span className="text-[11px] text-muted shrink-0 ml-2">
-              {ch.releaseDate}
-            </span>
-          )}
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-async function MangaDetailMangaStop({ mangaId }: { mangaId: string }) {
-  let manga
-  try {
-    manga = await getMangaStopCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no MangaStop." />
-  }
-
-  return (
-    <>
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
-          {manga.coverUrl ? (
-            <Image
-              src={manga.coverUrl}
-              alt={manga.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 256px"
-              className="object-cover"
-              priority
-              unoptimized
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Sem capa
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <h1 className="text-2xl font-bold">{manga.title}</h1>
-
-          <div className="flex flex-wrap gap-2">
-            {manga.status && (
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                {manga.status}
-              </span>
-            )}
-            {manga.type && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.type}
-              </span>
-            )}
-            {manga.year && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.year}
-              </span>
-            )}
-          </div>
-
-          {manga.author && (
-            <p className="text-sm text-muted">
-              Autor: <span className="text-foreground">{manga.author}</span>
-            </p>
-          )}
-
-          {manga.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {manga.genres.map(g => (
-                <span
-                  key={g}
-                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
-                >
-                  {g}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {manga.description && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
-              {manga.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Capítulos</h2>
-          <SourceBadge source="mangastop" />
-        </div>
-        <Suspense fallback={<ChapterListSkeleton />}>
-          <ChaptersSectionMangaStop mangaId={mangaId} />
-        </Suspense>
-      </section>
-    </>
-  )
-}
-
-async function MangaDetailLeituraManga({ mangaId }: { mangaId: string }) {
-  let manga
-  try {
-    manga = await getLeituraMangaCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no LeituraManga." />
-  }
-
-  return (
-    <>
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
-          {manga.coverUrl ? (
-            <Image
-              src={manga.coverUrl}
-              alt={manga.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 256px"
-              className="object-cover"
-              priority
-              unoptimized
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Sem capa
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <h1 className="text-2xl font-bold">{manga.title}</h1>
-
-          <div className="flex flex-wrap gap-2">
-            {manga.status && (
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                {manga.status}
-              </span>
-            )}
-            {manga.year && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.year}
-              </span>
-            )}
-          </div>
-
-          {manga.author && (
-            <p className="text-sm text-muted">
-              Autor: <span className="text-foreground">{manga.author}</span>
-            </p>
-          )}
-
-          {manga.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {manga.genres.map(g => (
-                <span
-                  key={g}
-                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
-                >
-                  {g}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {manga.description && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
-              {manga.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Capítulos</h2>
-          <SourceBadge source="leiturmanga" />
-        </div>
-        <Suspense fallback={<ChapterListSkeleton />}>
-          <ChaptersSectionLeituraManga mangaId={mangaId} />
-        </Suspense>
-      </section>
-    </>
-  )
-}
-
-async function ChaptersSectionLeituraManga({ mangaId }: { mangaId: string }) {
-  let chapters: LeituraMangaChapter[]
-  try {
-    chapters = await getLeituraMangaChaptersCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os capítulos." />
-  }
-
-  if (chapters.length === 0) {
-    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
-  }
-
-  return (
-    <div className="space-y-1">
-      {chapters.map(ch => (
-        <Link
-          key={ch.chapterId}
-          href={`/leitor/${encodeURIComponent(`${mangaId}:${ch.number}`)}?mangaId=${mangaId}&source=leiturmanga`}
-          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-medium text-foreground shrink-0">
-              Cap. {ch.number}
-            </span>
-            {ch.title && (
-              <span className="text-sm text-muted truncate">{ch.title}</span>
-            )}
-          </div>
-          {ch.date && (
-            <span className="text-[11px] text-muted shrink-0 ml-2">
-              {ch.date}
-            </span>
-          )}
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-async function MangaDetailQueroLer({ mangaId }: { mangaId: string }) {
-  let manga
-  try {
-    manga = await getQueroLerMangaCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no QueroLer." />
-  }
-
-  return (
-    <>
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
-          {manga.coverUrl ? (
-            <Image
-              src={manga.coverUrl}
-              alt={manga.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 256px"
-              className="object-cover"
-              priority
-              unoptimized
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Sem capa
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <h1 className="text-2xl font-bold">{manga.title}</h1>
-
-          {manga.altTitles && manga.altTitles.length > 0 && (
-            <p className="text-sm text-muted">{manga.altTitles.join(", ")}</p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {manga.status && (
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                {manga.status}
-              </span>
-            )}
-            {manga.year && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.year}
-              </span>
-            )}
-          </div>
-
-          {manga.author && (
-            <p className="text-sm text-muted">
-              Autor: <span className="text-foreground">{manga.author}</span>
-            </p>
-          )}
-
-          {manga.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {manga.genres.map(g => (
-                <span
-                  key={g}
-                  className="px-2 py-0.5 rounded bg-card border border-border text-xs text-muted"
-                >
-                  {g}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {manga.description && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
-              {manga.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Capítulos</h2>
-          <SourceBadge source="queroler" />
-        </div>
-        <Suspense fallback={<ChapterListSkeleton />}>
-          <ChaptersSectionQueroLer mangaId={mangaId} />
-        </Suspense>
-      </section>
-    </>
-  )
-}
-
-async function ChaptersSectionQueroLer({ mangaId }: { mangaId: string }) {
-  let chapters: QueroLerChapter[]
-  try {
-    chapters = await getQueroLerChaptersCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os capítulos." />
-  }
-
-  if (chapters.length === 0) {
-    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
-  }
-
-  return (
-    <div className="space-y-1">
-      {chapters.map(ch => (
-        <a
-          key={ch.id}
-          href={`https://queroler.com${ch.pdfUrl}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-medium text-foreground shrink-0">
-              Cap. {ch.number}
-            </span>
-            {ch.title && (
-              <span className="text-sm text-muted truncate">{ch.title}</span>
-            )}
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">
-              PDF
-            </span>
-          </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </a>
-      ))}
-    </div>
-  )
-}
-
-async function MangaDetailNexus({ mangaId }: { mangaId: string }) {
-  let manga: NexusMangaDetailResponse
-  try {
-    manga = await getNexusMangaCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os detalhes deste mangá no Nexus." />
-  }
-
-  const categories = manga.categories || []
-  const genres = categories.filter(c => c.type === "genre")
-  const themes = categories.filter(c => c.type === "theme")
-
-  return (
-    <>
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-64 aspect-[3/4] shrink-0 rounded-xl overflow-hidden bg-card">
-          {manga.coverImage ? (
-            <Image
-              src={manga.coverImage}
-              alt={manga.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 256px"
-              className="object-cover"
-              priority
-              unoptimized
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Sem capa
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 min-w-0">
-          <h1 className="text-2xl font-bold">{manga.title}</h1>
-
-          {manga.alternativeTitles && (
-            <p className="text-sm text-muted">{manga.alternativeTitles}</p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {manga.status && (
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                {manga.status}
-              </span>
-            )}
-            {manga.type && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted uppercase">
-                {manga.type}
-              </span>
-            )}
-            {manga.releaseYear && (
-              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs text-muted">
-                {manga.releaseYear}
-              </span>
-            )}
-            {manga.rating > 0 && (
-              <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-medium">
-                ★ {manga.rating.toFixed(1)}
-              </span>
-            )}
-          </div>
-
-          {manga.author && (
-            <p className="text-sm text-muted">
-              Autor: <span className="text-foreground">{manga.author}</span>
-            </p>
-          )}
-          {manga.publisher && (
-            <p className="text-sm text-muted">
-              Publisher: <span className="text-foreground">{manga.publisher}</span>
-            </p>
-          )}
-
-          {genres.length > 0 && (
-            <div className="text-sm text-muted">
-              Gêneros:{" "}
-              <span className="text-foreground">{genres.map(g => g.name).join(", ")}</span>
-            </div>
-          )}
-          {themes.length > 0 && (
-            <div className="text-sm text-muted">
-              Temas:{" "}
-              <span className="text-foreground">{themes.map(g => g.name).join(", ")}</span>
-            </div>
-          )}
-
-          {manga.description && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line line-clamp-6">
-              {manga.description}
-            </p>
-          )}
-
-          {manga.views > 0 && (
-            <p className="text-xs text-muted">
-              {manga.views.toLocaleString("pt-BR")} visualizações
-            </p>
-          )}
-        </div>
-
-        <div className="md:hidden w-full">
-          <SourceBadge source="nexustoons" />
-        </div>
-      </div>
-
-      <section className="mb-8">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          Capítulos
-          <SourceBadge source="nexustoons" size="xs" />
-        </h2>
-        <ChaptersSectionNexus slug={manga.slug} />
-      </section>
-    </>
-  )
-}
-
-async function ChaptersSectionNexus({ slug }: { slug: string }) {
-  let chapters: NexusChapter[]
-  try {
-    chapters = await getNexusChaptersCached(slug)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os capítulos do Nexus." />
-  }
-
-  if (chapters.length === 0) {
-    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
-  }
-
-  return (
-    <div className="space-y-1">
-      {chapters.map(ch => (
-        <Link
-          key={ch.id}
-          href={`/leitor/${ch.id}?source=nexustoons&mangaId=${encodeURIComponent(slug)}`}
-          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-medium text-foreground shrink-0">
-              Cap. {ch.number}
-            </span>
-            {ch.title && (
-              <span className="text-sm text-muted truncate">{ch.title}</span>
-            )}
-          </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-async function ChaptersSectionMangaStop({ mangaId }: { mangaId: string }) {
-  let chapters: MangaStopChapter[]
-  try {
-    chapters = await getMangaStopChaptersCached(mangaId)
-  } catch {
-    return <ErrorMessage message="Não foi possível carregar os capítulos." />
-  }
-
-  if (chapters.length === 0) {
-    return <p className="text-sm text-muted">Nenhum capítulo encontrado.</p>
-  }
-
-  return (
-    <div className="space-y-1">
-      {chapters.map(ch => (
-        <Link
-          key={ch.chapterId}
-          href={`/leitor/${encodeURIComponent(ch.chapterId)}?mangaId=${mangaId}&source=mangastop`}
-          className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-medium text-foreground shrink-0">
-              Cap. {ch.number}
-            </span>
-            {ch.title && (
-              <span className="text-sm text-muted truncate">{ch.title}</span>
-            )}
-          </div>
-          {ch.date && (
-            <span className="text-[11px] text-muted shrink-0 ml-2">
-              {ch.date}
-            </span>
-          )}
-        </Link>
-      ))}
-    </div>
-  )
+  return <MangaDetail manga={data.manga} chapters={data.chapters} readingUrl={readingUrl} />
 }
 
 export default async function MangaPage({
@@ -839,25 +237,14 @@ export default async function MangaPage({
   searchParams: Promise<{ source?: string }>
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
-  const source = sp.source === "mangafire" ? "mangafire" : sp.source === "mangastop" ? "mangastop" : sp.source === "leiturmanga" ? "leiturmanga" : sp.source === "queroler" ? "queroler" : sp.source === "nexustoons" ? "nexustoons" : "mangadex"
-
   if (!slug) notFound()
 
-  const DetailComponent = source === "mangafire"
-    ? MangaDetailMangaFire
-    : source === "mangastop"
-      ? MangaDetailMangaStop
-      : source === "leiturmanga"
-        ? MangaDetailLeituraManga
-        : source === "queroler"
-          ? MangaDetailQueroLer
-          : source === "nexustoons"
-            ? MangaDetailNexus
-            : MangaDetailMangaDex
+  const rawSource = (sp.source as SourceId) || "mangadex"
+  const source: SourceId = SOURCE_IDS.includes(rawSource) ? rawSource : "mangadex"
 
   return (
     <Suspense fallback={<MangaDetailSkeleton />}>
-      <DetailComponent mangaId={slug} />
+      <MangaDetailPage mangaId={slug} source={source} />
     </Suspense>
   )
 }

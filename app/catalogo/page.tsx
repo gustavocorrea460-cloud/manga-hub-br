@@ -1,39 +1,23 @@
-import Link from "next/link"
-import Image from "next/image"
 import { Suspense } from "react"
-import SourceBadge from "@/components/SourceBadge"
+import MangaCard from "@/components/MangaCard"
+import SourceToggle from "@/components/SourceToggle"
 import EmptyState from "@/components/EmptyState"
 import ErrorMessage from "@/components/ErrorMessage"
 import Pagination from "@/components/Pagination"
 import { MangaGridSkeleton } from "@/components/LoadingSkeleton"
 import { getCatalogEntries } from "@/lib/db"
+import type { SourceId } from "@/components/SourceBadge"
 
 const LIMIT = 30
-type SourceId = "mangadex" | "mangafire" | "mangastop" | "leiturmanga" | "queroler"
 
-async function CatalogGrid({
-  source,
-  page,
-  query,
-}: {
-  source: SourceId
-  page: number
-  query?: string
-}) {
-  if (source === "mangadex" || source === "mangafire") {
+const CATALOG_SOURCES: SourceId[] = ["mangastop", "leiturmanga"]
+
+async function CatalogGrid({ source, page }: { source: SourceId; page: number }) {
+  if (!CATALOG_SOURCES.includes(source)) {
     return (
       <EmptyState
         title="Catálogo indisponível"
         description="Esta fonte não possui catálogo offline. Use a busca para encontrar mangás."
-      />
-    )
-  }
-
-  if (source === "leiturmanga") {
-    return (
-      <EmptyState
-        title="Catálogo LeituraManga em breve"
-        description="O dump do catálogo LeituraManga ainda não foi realizado."
       />
     )
   }
@@ -57,45 +41,20 @@ async function CatalogGrid({
         {total} mangá{total !== 1 ? "s" : ""} no catálogo
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {entries.map(entry => {
+        {entries.map((entry, i) => {
           const meta = entry.metadata as Record<string, unknown>
-          const coverUrl = (meta?.coverUrl as string) || null
           return (
-            <Link
+            <MangaCard
               key={entry.id}
-              href={`/manga/${entry.slug}?source=mangastop`}
-              className="group flex flex-col gap-2 rounded-xl overflow-hidden bg-card border border-border hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/5"
-            >
-              <div className="relative aspect-[3/4] overflow-hidden bg-card">
-                {coverUrl ? (
-                  <Image
-                    src={coverUrl}
-                    alt={entry.title}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 16vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted text-xs">
-                    Sem capa
-                  </div>
-                )}
-                <div className="absolute top-1.5 left-1.5">
-                  <SourceBadge source={source} size="xs" />
-                </div>
-              </div>
-              <div className="px-2 pb-2">
-                <h3 className="text-xs font-medium line-clamp-2 leading-relaxed">
-                  {entry.title}
-                </h3>
-                {typeof meta?.status === "string" && (
-                  <span className="text-[10px] text-muted mt-0.5 block">
-                    {meta.status as string}
-                  </span>
-                )}
-              </div>
-            </Link>
+              index={i}
+              manga={{
+                id: entry.slug,
+                title: entry.title,
+                coverUrl: (meta?.coverUrl as string) || null,
+                source,
+                status: (meta?.status as string) || null,
+              }}
+            />
           )
         })}
       </div>
@@ -112,52 +71,25 @@ async function CatalogGrid({
 export default async function CatalogoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ source?: string; page?: string; q?: string }>
+  searchParams: Promise<{ source?: string; page?: string }>
 }) {
   const params = await searchParams
   const source = (params.source as SourceId) || "mangastop"
   const page = Math.max(1, Number(params.page) || 1)
-  const query = params.q
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Catálogo</h1>
-        <div className="flex gap-1">
-          <SourceToggle current={source} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Catálogo</h1>
+          <p className="text-muted text-sm mt-1">Todos os mangás importados das fontes</p>
         </div>
+        <SourceToggle current={source} sources={CATALOG_SOURCES} />
       </div>
 
-      <Suspense fallback={<MangaGridSkeleton />} key={`${source}:${page}:${query}`}>
-        <CatalogGrid source={source} page={page} query={query} />
+      <Suspense fallback={<MangaGridSkeleton />} key={`${source}:${page}`}>
+        <CatalogGrid source={source} page={page} />
       </Suspense>
-    </div>
-  )
-}
-
-function SourceToggle({ current }: { current: SourceId }) {
-  const sources: { id: SourceId; label: string }[] = [
-    { id: "mangastop", label: "MangaStop" },
-    { id: "leiturmanga", label: "LeituraManga" },
-    { id: "mangadex", label: "MangaDex" },
-    { id: "mangafire", label: "MangaFire" },
-  ]
-
-  return (
-    <div className="flex gap-1">
-      {sources.map(s => (
-        <Link
-          key={s.id}
-          href={`/catalogo?source=${s.id}`}
-          className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-            current === s.id
-              ? "bg-accent text-white"
-              : "bg-card border border-border text-muted hover:text-foreground"
-          }`}
-        >
-          {s.label}
-        </Link>
-      ))}
     </div>
   )
 }
