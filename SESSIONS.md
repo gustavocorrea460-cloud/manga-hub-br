@@ -11,6 +11,47 @@
 
 ---
 
+## Sessão 24 — 2026-09-04 | Integração NexusToons (6ª fonte + OrionCrypto reversed)
+
+**O que foi feito:**
+- **Integração NexusToons COMPLETA** (6ª fonte de dados PT-BR, 13.5k+ títulos):
+  - `lib/api/orion.ts` — **OrionCrypto REVERSED e DOCUMENTADO** (a pedido do usuário):
+    - Secret `OrionNexus2025CryptoKey!Secure`, 5 chaves derivadas (SHA-256 de `_orion_key_{n}_v2_{secret}`)
+    - RC4-like KSA → sbox + rsbox, decrypt com rotateRight e XOR encadeado
+    - Payload `{d: base64, k: índice, v: 1|2}` → JSON plano
+  - `lib/api/nexustoons.ts` — cliente da API:
+    - `searchManga(q, page)` → `/api/mangas?q=` (SEM criptografia, paginada)
+    - `getManga(slug)` → `/api/manga/{slug}` (criptografado)
+    - `getChapterPages(id)` → `/api/read/{id}` (criptografado)
+  - `types/nexustoons.ts` — tipos completos
+  - `lib/cache.ts` — prefixo `nx:*` (search, manga, chapters, pages)
+  - `lib/sources.ts` — adapter `nexustoons` (search/getManga/getChapters/getPages/label)
+  - `lib/api/registry.ts` — nova entrada (type api, scope fallback, cor yellow)
+  - UI completa: SourceBadge (Nexus), NexusResults + SourceToggle na busca,
+    MangaDetailNexus (rating ★, publisher, gêneros/temas), NexusReader
+- **Testes:** busca (13.559 resultados), detalhe (3862 caps), leitor (17 páginas decriptadas do CDN img.nx-toons.xyz)
+- **Documentação:** discovery `2026-09-04-nexustoons-structure.md` atualizado com implementação TS
+  (código Python de referência mantido), MEMORY.md (seção Nexus + árvore), TIMELINE.md
+
+**Decisões:**
+- Nexus como fonte **API** (não scraper) — mais estável que HTML scraping
+- Criptografia documentada por ser inversa de decisão do usuário ("documente a criptografia")
+- Cache `nx:*` TTL 30min como as demais (proteção de rate do Nexus)
+- ⚠️ Nota legal registrada: reversão feita para análise; reavaliar se monetizado
+
+**Estado do build:** ✅ Compilando (10 routes)
+**Commit:** `2e6847f`
+
+**Próximos passos:**
+- [ ] Push + deploy (validar Nexus em produção: `/busca?source=nexustoons&q=one+piece`)
+- [ ] Adicionar Nexus ao fallback chain (searchAllSources)
+- [ ] Health check inclui Nexus (já via registry)
+- [ ] Revogar token antigo `ghp_7wbOgl...` no GitHub (ação do usuário)
+
+**Blocadores:** Nenhum
+
+---
+
 ## Sessão 23 — 2026-09-04 | Análise de fontes + registry/health + QueroLer DOWN
 
 **O que foi feito:**
